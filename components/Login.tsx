@@ -35,7 +35,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       <GlassCard className="w-full max-w-md relative z-10">
         <div className="text-center mb-10">
           <img 
-            src="http://aaraainfrastructure.com/png" 
+            src="https://aaraainfrastructure.com/logo.png" 
             alt="Logo" 
             className="h-16 w-auto mx-auto mb-6 object-contain"
           />

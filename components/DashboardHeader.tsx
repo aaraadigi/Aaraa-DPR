@@ -35,7 +35,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ userRole, onLo
     >
       <div className="flex items-center space-x-4">
         <img 
-          src="http://aaraainfrastructure.com/png" 
+          src="https://aaraainfrastructure.com/logo.png" 
           alt="Aaraa Logo" 
           className="h-10 w-auto object-contain rounded-md" 
         />

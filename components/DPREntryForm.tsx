@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Save, AlertCircle, HardHat, Hammer, Truck, ShieldAlert } from 'lucide-react';
+import { Save, AlertCircle, HardHat, Hammer, Truck, ShieldAlert, Plus, X } from 'lucide-react';
 import { GlassCard } from './ui/GlassCard';
 import { LABOUR_CATEGORIES, MATERIAL_TYPES } from '../constants';
 import { DPRRecord, LabourEntry, MaterialEntry, ActivityEntry } from '../types';
@@ -9,9 +9,14 @@ interface DPREntryFormProps {
   onSave: (data: DPRRecord) => void;
 }
 
+// Extend LabourEntry locally to track custom rows
+interface FormLabourEntry extends LabourEntry {
+  isCustom?: boolean;
+}
+
 export const DPREntryForm: React.FC<DPREntryFormProps> = ({ onSave }) => {
   const [step, setStep] = useState(1);
-  const [labour, setLabour] = useState<LabourEntry[]>(
+  const [labour, setLabour] = useState<FormLabourEntry[]>(
     LABOUR_CATEGORIES.map(cat => ({ category: cat, count: 0, names: '' }))
   );
   const [materials, setMaterials] = useState<MaterialEntry[]>([]);
@@ -21,18 +26,37 @@ export const DPREntryForm: React.FC<DPREntryFormProps> = ({ onSave }) => {
   const [machinery, setMachinery] = useState('');
   const [safety, setSafety] = useState('');
   const [risks, setRisks] = useState('');
+  
+  // Custom Material State
+  const [customMatName, setCustomMatName] = useState('');
+  const [customMatUnit, setCustomMatUnit] = useState('');
 
   // Helpers
   const updateLabour = (index: number, val: number) => {
     const newLabour = [...labour];
     newLabour[index].count = Math.max(0, val);
-    // If count becomes 0, optionally clear names, or keep them. keeping them for now is safer.
     setLabour(newLabour);
   };
 
   const updateLabourNames = (index: number, val: string) => {
     const newLabour = [...labour];
     newLabour[index].names = val;
+    setLabour(newLabour);
+  };
+
+  const updateLabourCategory = (index: number, val: string) => {
+    const newLabour = [...labour];
+    newLabour[index].category = val;
+    setLabour(newLabour);
+  };
+
+  const addLabourRow = () => {
+    setLabour([...labour, { category: '', count: 0, names: '', isCustom: true }]);
+  };
+
+  const removeLabourRow = (index: number) => {
+    const newLabour = [...labour];
+    newLabour.splice(index, 1);
     setLabour(newLabour);
   };
 
@@ -58,6 +82,23 @@ export const DPREntryForm: React.FC<DPREntryFormProps> = ({ onSave }) => {
   const updateMaterialQty = (name: string, qty: number) => {
     setMaterials(materials.map(m => m.name === name ? { ...m, quantity: Math.max(0, qty) } : m));
   };
+  
+  const removeMaterial = (name: string) => {
+    setMaterials(materials.filter(m => m.name !== name));
+  };
+
+  const addCustomMaterial = () => {
+    if (customMatName.trim() && customMatUnit.trim()) {
+      // Check if exists
+      if (materials.some(m => m.name.toLowerCase() === customMatName.trim().toLowerCase())) {
+        alert('Material already added');
+        return;
+      }
+      setMaterials([...materials, { name: customMatName.trim(), unit: customMatUnit.trim(), quantity: 0 }]);
+      setCustomMatName('');
+      setCustomMatUnit('');
+    }
+  };
 
   const handleSubmit = () => {
     const newRecord: DPRRecord = {
@@ -65,7 +106,10 @@ export const DPREntryForm: React.FC<DPREntryFormProps> = ({ onSave }) => {
       date: new Date().toISOString(),
       timestamp: Date.now(),
       submittedBy: 'maha',
-      labour: labour.filter(l => l.count > 0),
+      // Filter out empty categories and sanitize the object (remove isCustom)
+      labour: labour
+        .filter(l => l.count > 0 && l.category.trim() !== '')
+        .map(({ category, count, names }) => ({ category, count, names })),
       materials: materials.filter(m => m.quantity > 0),
       activities: activities.filter(a => a.description.trim() !== ''),
       machinery,
@@ -124,8 +168,30 @@ export const DPREntryForm: React.FC<DPREntryFormProps> = ({ onSave }) => {
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {labour.map((item, idx) => (
-                    <div key={item.category} className="bg-slate-50 p-4 rounded-xl border border-slate-100 transition-all duration-300">
-                      <label className="block text-sm font-medium text-slate-600 mb-2">{item.category}</label>
+                    <div key={idx} className="bg-slate-50 p-4 rounded-xl border border-slate-100 transition-all duration-300 relative group">
+                      <div className="flex justify-between items-start mb-2 h-8">
+                        {item.isCustom ? (
+                          <input 
+                            type="text" 
+                            placeholder="Role Name" 
+                            value={item.category}
+                            onChange={(e) => updateLabourCategory(idx, e.target.value)}
+                            className="bg-transparent border-b border-slate-300 focus:border-aaraa-blue focus:outline-none text-sm font-bold text-slate-700 w-full mr-2 pb-1"
+                            autoFocus
+                          />
+                        ) : (
+                          <label className="block text-sm font-medium text-slate-600 pt-1">{item.category}</label>
+                        )}
+                        {item.isCustom && (
+                          <button 
+                            onClick={() => removeLabourRow(idx)}
+                            className="text-slate-400 hover:text-red-500 transition-colors"
+                          >
+                            <X size={16} />
+                          </button>
+                        )}
+                      </div>
+
                       <div className="flex items-center space-x-3">
                         <button 
                           onClick={() => updateLabour(idx, item.count - 1)}
@@ -152,7 +218,7 @@ export const DPREntryForm: React.FC<DPREntryFormProps> = ({ onSave }) => {
                             className="overflow-hidden"
                           >
                             <textarea
-                              placeholder={`Enter names for ${item.category}...`}
+                              placeholder={`Names for ${item.category || 'this role'}...`}
                               value={item.names || ''}
                               onChange={(e) => updateLabourNames(idx, e.target.value)}
                               className="w-full text-xs p-3 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-aaraa-blue/20 focus:border-aaraa-blue resize-none text-slate-700"
@@ -163,6 +229,17 @@ export const DPREntryForm: React.FC<DPREntryFormProps> = ({ onSave }) => {
                       </AnimatePresence>
                     </div>
                   ))}
+                  
+                  {/* Add Other Button */}
+                  <button 
+                    onClick={addLabourRow}
+                    className="flex flex-col items-center justify-center min-h-[140px] rounded-xl border-2 border-dashed border-slate-200 text-slate-400 hover:border-aaraa-blue hover:text-aaraa-blue hover:bg-blue-50/50 transition-all duration-300 group"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-slate-100 group-hover:bg-white flex items-center justify-center mb-2 transition-colors shadow-sm">
+                      <Plus size={20} />
+                    </div>
+                    <span className="text-sm font-medium">Add Other Worker</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -234,6 +311,8 @@ export const DPREntryForm: React.FC<DPREntryFormProps> = ({ onSave }) => {
                   <Truck className="mr-2 text-aaraa-blue" />
                   Materials Consumed
                 </h3>
+                
+                {/* Predefined Chips */}
                 <div className="flex flex-wrap gap-2 mb-6">
                   {MATERIAL_TYPES.map(mat => {
                     const isSelected = materials.some(m => m.name === mat.name);
@@ -253,24 +332,61 @@ export const DPREntryForm: React.FC<DPREntryFormProps> = ({ onSave }) => {
                   })}
                 </div>
                 
+                {/* Custom Material Input */}
+                <div className="bg-slate-50/80 p-4 rounded-xl border border-dashed border-slate-300 mb-6">
+                  <label className="text-xs font-semibold text-slate-400 uppercase mb-2 block">Add Other Material</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      placeholder="Material Name"
+                      className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-aaraa-blue"
+                      value={customMatName}
+                      onChange={e => setCustomMatName(e.target.value)}
+                    />
+                    <input 
+                      type="text" 
+                      placeholder="Unit (e.g. Ltrs)"
+                      className="w-28 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-aaraa-blue"
+                      value={customMatUnit}
+                      onChange={e => setCustomMatUnit(e.target.value)}
+                    />
+                    <button 
+                      onClick={addCustomMaterial}
+                      disabled={!customMatName || !customMatUnit}
+                      className="bg-slate-800 text-white px-3 rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-slate-700 transition-colors flex items-center justify-center min-w-[40px]"
+                    >
+                      <Plus size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* List of active materials */}
                 <div className="space-y-4">
                   {materials.map(mat => (
                     <motion.div 
                       key={mat.name}
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
-                      className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl shadow-sm"
+                      className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl shadow-sm group"
                     >
                       <span className="font-medium text-slate-700">{mat.name}</span>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="number"
-                          placeholder="0"
-                          value={mat.quantity || ''}
-                          onChange={(e) => updateMaterialQty(mat.name, parseFloat(e.target.value))}
-                          className="w-24 text-right border-b border-slate-200 focus:border-aaraa-blue outline-none py-1"
-                        />
-                        <span className="text-sm text-slate-400 w-10">{mat.unit}</span>
+                      <div className="flex items-center space-x-3">
+                        <div className="flex items-center border-b border-slate-200 focus-within:border-aaraa-blue">
+                          <input
+                            type="number"
+                            placeholder="0"
+                            value={mat.quantity || ''}
+                            onChange={(e) => updateMaterialQty(mat.name, parseFloat(e.target.value))}
+                            className="w-20 text-right outline-none py-1 bg-transparent"
+                          />
+                          <span className="text-sm text-slate-400 w-10 text-right">{mat.unit}</span>
+                        </div>
+                        <button 
+                          onClick={() => removeMaterial(mat.name)}
+                          className="text-slate-300 hover:text-red-500 transition-colors p-1"
+                        >
+                          <X size={18} />
+                        </button>
                       </div>
                     </motion.div>
                   ))}
