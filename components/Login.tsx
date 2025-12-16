@@ -21,6 +21,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       onLogin('maha', 'Maha');
     } else if (username === 'dpr' && password === '123') {
       onLogin('dpr', 'DPR Viewer');
+    } else if (username === 'finance' && password === '123') {
+      onLogin('finance', 'Accounts Dept');
+    } else if (username === 'procurement' && password === '123') {
+      onLogin('procurement', 'Procurement Team');
+    } else if (username === 'pm' && password === '123') {
+      onLogin('pm', 'Project Manager');
+    } else if (username === 'se' && password === '123') {
+      onLogin('se', 'Site Engineer');
     } else {
       setError('Invalid credentials');
     }

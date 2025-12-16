@@ -4,8 +4,13 @@ import { Login } from './components/Login';
 import { DashboardHeader } from './components/DashboardHeader';
 import { MahaDashboard } from './components/MahaDashboard';
 import { DPRViewer } from './components/DPRViewer';
+import { FinanceDashboard } from './components/FinanceDashboard';
+import { ProcurementDashboard } from './components/ProcurementDashboard';
+import { PMDashboard } from './components/PMDashboard';
+import { SEDashboard } from './components/SEDashboard';
 import { Footer } from './components/Footer';
-import { AuthState, DPRRecord, UserRole } from './types';
+import { AuthState, DPRRecord, MaterialRequest, UserRole, Project, ProjectTask, Notification } from './types';
+import { PROJECTS_DATA, INITIAL_TASKS } from './constants';
 import { supabase } from './lib/supabaseClient';
 
 const App: React.FC = () => {
@@ -16,6 +21,15 @@ const App: React.FC = () => {
   });
 
   const [dprRecords, setDprRecords] = useState<DPRRecord[]>([]);
+  const [materialRequests, setMaterialRequests] = useState<MaterialRequest[]>([]);
+  
+  // Project Management State (Local for Demo session)
+  const [projects, setProjects] = useState<Project[]>(PROJECTS_DATA);
+  const [tasks, setTasks] = useState<ProjectTask[]>(INITIAL_TASKS);
+  
+  // Notifications for PM
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  
   const [loading, setLoading] = useState(false);
 
   // Fetch Data from Supabase
@@ -28,10 +42,8 @@ const App: React.FC = () => {
         .order('timestamp', { ascending: false });
 
       if (error) {
-        console.error('Error fetching DPRs:', error);
-        // Fallback to empty or local cache if needed, for now just empty
+        console.error('Error fetching DPRs:', error.message || error);
       } else if (data) {
-        // Map database columns (snake_case) to app types (camelCase)
         const formattedData: DPRRecord[] = data.map((item: any) => ({
           id: item.id,
           date: item.date,
@@ -49,9 +61,40 @@ const App: React.FC = () => {
       setLoading(false);
     };
 
-    // Trigger fetch when authenticated
+    const fetchRequests = async () => {
+      const { data, error } = await supabase
+        .from('material_requests')
+        .select('*')
+        .order('timestamp', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching requests:', error.message || error);
+      } else if (data) {
+         const formattedRequests: MaterialRequest[] = data.map((item: any) => {
+           return {
+             id: item.id,
+             date: item.date,
+             timestamp: item.timestamp,
+             requestedBy: item.requested_by,
+             // Direct mapping from DB column now that SQL is applied
+             projectName: item.project_name || 'Unknown Project',
+             items: item.items || [],
+             urgency: item.urgency,
+             status: item.status,
+             notes: item.notes,
+             procurementComments: item.procurement_comments || '',
+             pmComments: item.pm_comments || '',
+             poNumber: item.po_number || '',
+             grnDetails: item.grn_details || ''
+           };
+         });
+         setMaterialRequests(formattedRequests);
+      }
+    };
+
     if (auth.isAuthenticated) {
       fetchDPRs();
+      fetchRequests();
     }
   }, [auth.isAuthenticated]);
 
@@ -70,13 +113,12 @@ const App: React.FC = () => {
       user: null
     });
     setDprRecords([]);
+    setMaterialRequests([]);
   };
 
   const handleSaveDPR = async (newRecord: DPRRecord) => {
-    // Optimistic UI Update
     setDprRecords(prev => [newRecord, ...prev]);
 
-    // Prepare payload for Supabase (map to snake_case)
     const dbPayload = {
       id: newRecord.id,
       date: newRecord.date,
@@ -90,17 +132,122 @@ const App: React.FC = () => {
       risks_and_delays: newRecord.risksAndDelays
     };
 
-    // Insert into Supabase
     const { error } = await supabase
       .from('dpr_records')
       .insert([dbPayload]);
 
     if (error) {
-      console.error('Error saving DPR:', error);
-      alert('Failed to save to database. Please check connection.');
-      // Optionally rollback state here
+      console.error('Error saving DPR:', error.message || error);
+      alert('Failed to save to database: ' + (error.message || 'Unknown error'));
     } else {
       alert('DPR Submitted Successfully!');
+    }
+  };
+
+  // Step 1: SE Raises Indent
+  const handleSaveMaterialRequest = async (newRequest: MaterialRequest) => {
+    setMaterialRequests(prev => [newRequest, ...prev]);
+
+    const dbPayload = {
+      id: newRequest.id,
+      date: newRequest.date,
+      timestamp: newRequest.timestamp,
+      requested_by: newRequest.requestedBy,
+      project_name: newRequest.projectName, // Direct save to column
+      items: newRequest.items,
+      urgency: newRequest.urgency,
+      status: newRequest.status,
+      notes: newRequest.notes
+    };
+
+    const { error } = await supabase
+      .from('material_requests')
+      .insert([dbPayload]);
+      
+    if (error) {
+      console.error('Error saving Request:', error.message || error);
+      alert('Failed to save request to server: ' + (error.message || 'Unknown error'));
+    } else {
+      alert('Material Request Sent to Procurement!');
+    }
+  };
+
+  // Central Logic for Status Transitions
+  const handleUpdateIndentStatus = async (id: string, newStatus: string, payload: any = {}) => {
+    // Optimistic Update
+    setMaterialRequests(prev => prev.map(req => {
+      if (req.id === id) {
+        return { ...req, status: newStatus as any, ...payload };
+      }
+      return req;
+    }));
+
+    // DB Update
+    const snakePayload: any = { status: newStatus };
+    if (payload.procurementComments) snakePayload.procurement_comments = payload.procurementComments;
+    if (payload.pmComments) snakePayload.pm_comments = payload.pmComments;
+    if (payload.poNumber) snakePayload.po_number = payload.poNumber;
+    if (payload.grnDetails) snakePayload.grn_details = payload.grnDetails;
+
+    const { error } = await supabase
+      .from('material_requests')
+      .update(snakePayload)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating status:', error);
+      alert('Failed to update status in database.');
+    } else {
+        // Optional: Trigger Notification based on status change
+        if (newStatus === 'Pending_PM') {
+             setNotifications(prev => [{ id: `n-${Date.now()}`, message: 'New Indent waiting for approval', timestamp: Date.now(), type: 'info', projectName: 'Procurement' }, ...prev]);
+        }
+    }
+  };
+
+  // PM Assigns Task
+  const handleAssignTask = (newTask: ProjectTask) => {
+    setTasks(prev => [...prev, newTask]);
+    alert('Task Assigned to Site Engineer');
+  };
+
+  // SE Updates Task -> Triggers Notification for PM
+  const handleUpdateTask = (taskId: string, status: ProjectTask['status'], updates?: string) => {
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status, updates: updates || t.updates } : t));
+    
+    // Create Notification
+    const task = tasks.find(t => t.id === taskId);
+    const project = projects.find(p => p.id === task?.projectId);
+    
+    if (task && project) {
+      const newNotification: Notification = {
+        id: `notif-${Date.now()}`,
+        timestamp: Date.now(),
+        type: 'info',
+        projectName: project.name,
+        message: `Task updated: "${task.description}" marked as ${status}. ${updates ? `Note: ${updates}` : ''}`
+      };
+      setNotifications(prev => [newNotification, ...prev]);
+    }
+  };
+
+  const handleClearNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  // SE Updates Project Progress
+  const handleUpdateProjectProgress = (projectId: string, progress: number) => {
+    setProjects(prev => prev.map(p => p.id === projectId ? { ...p, progress } : p));
+  };
+
+  const getHeaderTitle = () => {
+    switch (auth.role) {
+      case 'maha': return 'Data Entry Portal';
+      case 'finance': return 'Accounts & Finance';
+      case 'procurement': return 'Procurement Team';
+      case 'pm': return 'Project Manager Dashboard';
+      case 'se': return 'Site Engineer Portal';
+      default: return 'Executive Dashboard';
     }
   };
 
@@ -128,21 +275,64 @@ const App: React.FC = () => {
             <DashboardHeader 
               userRole={auth.role || ''} 
               onLogout={handleLogout}
-              title={auth.role === 'maha' ? 'Data Entry Portal' : 'Executive Dashboard'} 
+              title={getHeaderTitle()} 
             />
             
             <main className="flex-grow">
-              {/* Show loading state if fetching for the first time */}
-              {loading && dprRecords.length === 0 ? (
+              {loading && dprRecords.length === 0 && materialRequests.length === 0 ? (
                 <div className="flex items-center justify-center h-64">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-aaraa-blue"></div>
                 </div>
               ) : (
                 <>
-                  {auth.role === 'maha' ? (
-                    <MahaDashboard onSaveDPR={handleSaveDPR} recentDPRs={dprRecords} />
-                  ) : (
-                    <DPRViewer records={dprRecords} />
+                  {auth.role === 'maha' && (
+                    <MahaDashboard 
+                      onSaveDPR={handleSaveDPR} 
+                      onSaveMaterialRequest={handleSaveMaterialRequest}
+                      recentDPRs={dprRecords}
+                      recentRequests={materialRequests}
+                    />
+                  )}
+                  {auth.role === 'dpr' && (
+                    <DPRViewer 
+                      records={dprRecords} 
+                      materialRequests={materialRequests}
+                    />
+                  )}
+                  {auth.role === 'finance' && (
+                    <FinanceDashboard 
+                      dprRecords={dprRecords}
+                      materialRequests={materialRequests}
+                      onUpdateStatus={(id, status) => handleUpdateIndentStatus(id, status)}
+                    />
+                  )}
+                  {auth.role === 'procurement' && (
+                    <ProcurementDashboard 
+                      materialRequests={materialRequests}
+                      onUpdateIndentStatus={handleUpdateIndentStatus}
+                    />
+                  )}
+                  {auth.role === 'pm' && (
+                    <PMDashboard 
+                      projects={projects}
+                      tasks={tasks}
+                      notifications={notifications}
+                      requests={materialRequests}
+                      onAssignTask={handleAssignTask}
+                      onClearNotification={handleClearNotification}
+                      onUpdateIndentStatus={handleUpdateIndentStatus}
+                    />
+                  )}
+                  {auth.role === 'se' && (
+                    <SEDashboard 
+                      projects={projects}
+                      tasks={tasks}
+                      requests={materialRequests}
+                      onUpdateTask={handleUpdateTask}
+                      onUpdateProjectProgress={handleUpdateProjectProgress}
+                      onSaveMaterialRequest={handleSaveMaterialRequest}
+                      onUpdateIndentStatus={handleUpdateIndentStatus}
+                    />
                   )}
                 </>
               )}
