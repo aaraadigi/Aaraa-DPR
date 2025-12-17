@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Save, AlertCircle, HardHat, Hammer, Truck, ShieldAlert, Plus, X } from 'lucide-react';
+import { Save, AlertCircle, HardHat, Hammer, Truck, ShieldAlert, Plus, X, Building2 } from 'lucide-react';
 import { GlassCard } from './ui/GlassCard';
 import { LABOUR_CATEGORIES, MATERIAL_TYPES } from '../constants';
 import { DPRRecord, LabourEntry, MaterialEntry, ActivityEntry } from '../types';
 
 interface DPREntryFormProps {
   onSave: (data: DPRRecord) => void;
+  defaultProjectName?: string;
 }
 
 // Extend LabourEntry locally to track custom rows
@@ -14,7 +15,7 @@ interface FormLabourEntry extends LabourEntry {
   isCustom?: boolean;
 }
 
-export const DPREntryForm: React.FC<DPREntryFormProps> = ({ onSave }) => {
+export const DPREntryForm: React.FC<DPREntryFormProps> = ({ onSave, defaultProjectName }) => {
   const [step, setStep] = useState(1);
   const [labour, setLabour] = useState<FormLabourEntry[]>(
     LABOUR_CATEGORIES.map(cat => ({ category: cat, count: 0, names: '' }))
@@ -105,7 +106,8 @@ export const DPREntryForm: React.FC<DPREntryFormProps> = ({ onSave }) => {
       id: `dpr-${Date.now()}`,
       date: new Date().toISOString(),
       timestamp: Date.now(),
-      submittedBy: 'maha',
+      submittedBy: defaultProjectName ? 'Waaree Site Incharge' : 'maha',
+      projectName: defaultProjectName,
       // Filter out empty categories and sanitize the object (remove isCustom)
       labour: labour
         .filter(l => l.count > 0 && l.category.trim() !== '')
@@ -128,7 +130,8 @@ export const DPREntryForm: React.FC<DPREntryFormProps> = ({ onSave }) => {
 
   return (
     <div className="max-w-4xl mx-auto pb-20">
-      <div className="flex space-x-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex justify-between items-center mb-6">
+         <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = step === tab.id;
@@ -149,6 +152,13 @@ export const DPREntryForm: React.FC<DPREntryFormProps> = ({ onSave }) => {
             </button>
           );
         })}
+      </div>
+      {defaultProjectName && (
+        <div className="hidden md:flex items-center text-xs font-bold text-slate-500 bg-white px-3 py-1.5 rounded-full shadow-sm">
+          <Building2 size={14} className="mr-2" />
+          {defaultProjectName}
+        </div>
+      )}
       </div>
 
       <AnimatePresence mode='wait'>

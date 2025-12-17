@@ -17,18 +17,24 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     e.preventDefault();
     setError('');
 
-    if (username === 'maha' && password === '123') {
+    // Sanitize inputs: remove spaces, convert username to lowercase
+    const cleanUser = username.trim().toLowerCase();
+    const cleanPass = password.trim();
+
+    if (cleanUser === 'maha' && cleanPass === '123') {
       onLogin('maha', 'Maha');
-    } else if (username === 'dpr' && password === '123') {
+    } else if (cleanUser === 'dpr' && cleanPass === '123') {
       onLogin('dpr', 'DPR Viewer');
-    } else if (username === 'finance' && password === '123') {
+    } else if (cleanUser === 'finance' && cleanPass === '123') {
       onLogin('finance', 'Accounts Dept');
-    } else if (username === 'procurement' && password === '123') {
+    } else if (cleanUser === 'procurement' && cleanPass === '123') {
       onLogin('procurement', 'Procurement Team');
-    } else if (username === 'pm' && password === '123') {
+    } else if (cleanUser === 'pm' && cleanPass === '123') {
       onLogin('pm', 'Project Manager');
-    } else if (username === 'se' && password === '123') {
+    } else if (cleanUser === 'se' && cleanPass === '123') {
       onLogin('se', 'Site Engineer');
+    } else if (cleanUser === 'waaree' && cleanPass === '123') {
+      onLogin('waaree', 'Waaree Site Incharge');
     } else {
       setError('Invalid credentials');
     }
@@ -62,6 +68,9 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-aaraa-blue/20 focus:border-aaraa-blue transition-all"
                 placeholder="Enter username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                autoComplete="off"
               />
             </div>
           </div>
@@ -76,6 +85,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-aaraa-blue/20 focus:border-aaraa-blue transition-all"
                 placeholder="••••••"
+                autoCapitalize="none"
               />
             </div>
           </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Users, Package, Activity, ArrowRight, CheckCircle2, Clock, FileText } from 'lucide-react';
+import { Plus, Users, Package, Activity, ArrowRight, CheckCircle2, Clock, FileText, Building2 } from 'lucide-react';
 import { GlassCard } from './ui/GlassCard';
 import { DPREntryForm } from './DPREntryForm';
 import { MaterialRequestForm } from './MaterialRequestForm';
@@ -12,25 +12,36 @@ interface MahaDashboardProps {
   onSaveMaterialRequest: (req: MaterialRequest) => void;
   recentDPRs: DPRRecord[];
   recentRequests: MaterialRequest[];
+  defaultProjectName?: string; // New Prop
 }
 
 export const MahaDashboard: React.FC<MahaDashboardProps> = ({ 
   onSaveDPR, 
   onSaveMaterialRequest, 
   recentDPRs,
-  recentRequests 
+  recentRequests,
+  defaultProjectName
 }) => {
   const [view, setView] = useState<'dashboard' | 'dpr_form' | 'material_form' | 'all_reports'>('dashboard');
 
-  // Calculate simple stats for "Today" (simulated based on last entry)
-  const lastDPR = recentDPRs[0];
+  // Filter recents if defaultProjectName is set
+  const filteredDPRs = defaultProjectName 
+    ? recentDPRs.filter(d => d.projectName === defaultProjectName)
+    : recentDPRs;
+    
+  const filteredRequests = defaultProjectName
+    ? recentRequests.filter(r => r.projectName === defaultProjectName)
+    : recentRequests;
+
+  // Calculate stats based on filtered data
+  const lastDPR = filteredDPRs[0];
   const totalWorkers = lastDPR ? lastDPR.labour.reduce((acc, curr) => acc + curr.count, 0) : 0;
   const activeActivities = lastDPR ? lastDPR.activities.length : 0;
 
   // Combine and sort recent activity
   const recentActivity = [
-    ...recentDPRs.map(d => ({ ...d, type: 'dpr' as const })),
-    ...recentRequests.map(r => ({ ...r, type: 'request' as const }))
+    ...filteredDPRs.map(d => ({ ...d, type: 'dpr' as const })),
+    ...filteredRequests.map(r => ({ ...r, type: 'request' as const }))
   ].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5); // Show top 5
 
   if (view === 'dpr_form') {
@@ -43,6 +54,7 @@ export const MahaDashboard: React.FC<MahaDashboardProps> = ({
           ← Back to Dashboard
         </button>
         <DPREntryForm 
+          defaultProjectName={defaultProjectName}
           onSave={(data) => {
             onSaveDPR(data);
             setView('dashboard');
@@ -62,6 +74,7 @@ export const MahaDashboard: React.FC<MahaDashboardProps> = ({
           ← Back to Dashboard
         </button>
         <MaterialRequestForm
+          projectName={defaultProjectName}
           onSave={(data) => {
             onSaveMaterialRequest(data);
             setView('dashboard');
@@ -76,8 +89,8 @@ export const MahaDashboard: React.FC<MahaDashboardProps> = ({
     return (
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <DPRViewer 
-          records={recentDPRs} 
-          materialRequests={recentRequests} 
+          records={filteredDPRs} 
+          materialRequests={filteredRequests} 
           onBack={() => setView('dashboard')}
         />
       </motion.div>
@@ -88,7 +101,14 @@ export const MahaDashboard: React.FC<MahaDashboardProps> = ({
     <div className="space-y-8 max-w-5xl mx-auto px-4 pb-20">
       <div className="flex flex-col md:flex-row justify-between items-end gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Good Morning, Maha.</h2>
+          {defaultProjectName && (
+             <div className="inline-flex items-center bg-blue-100 text-aaraa-blue px-3 py-1 rounded-full text-xs font-bold mb-2">
+               <Building2 size={12} className="mr-1" /> {defaultProjectName}
+             </div>
+          )}
+          <h2 className="text-3xl font-bold text-slate-800 tracking-tight">
+             {defaultProjectName ? 'Site Dashboard' : 'Good Morning, Maha.'}
+          </h2>
           <p className="text-slate-500 mt-2">Here is the site overview for today.</p>
         </div>
         <div className="flex space-x-3">

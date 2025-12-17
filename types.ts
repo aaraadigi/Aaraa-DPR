@@ -1,4 +1,4 @@
-export type UserRole = 'maha' | 'dpr' | 'finance' | 'procurement' | 'pm' | 'se' | null;
+export type UserRole = 'maha' | 'dpr' | 'finance' | 'procurement' | 'pm' | 'se' | 'waaree' | null;
 
 export interface LabourEntry {
   category: string;
@@ -25,6 +25,7 @@ export interface DPRRecord {
   date: string; // ISO string YYYY-MM-DD
   timestamp: number;
   submittedBy: string;
+  projectName?: string; // Added for Waaree flow
   labour: LabourEntry[];
   materials: MaterialEntry[];
   activities: ActivityEntry[];

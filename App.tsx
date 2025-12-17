@@ -49,6 +49,7 @@ const App: React.FC = () => {
           date: item.date,
           timestamp: item.timestamp,
           submittedBy: item.submitted_by,
+          projectName: item.project_name || '', // Fetch project name
           labour: item.labour || [],
           materials: item.materials || [],
           activities: item.activities || [],
@@ -124,6 +125,7 @@ const App: React.FC = () => {
       date: newRecord.date,
       timestamp: newRecord.timestamp,
       submitted_by: newRecord.submittedBy,
+      project_name: newRecord.projectName, // Save project name
       labour: newRecord.labour,
       materials: newRecord.materials,
       activities: newRecord.activities,
@@ -243,6 +245,7 @@ const App: React.FC = () => {
   const getHeaderTitle = () => {
     switch (auth.role) {
       case 'maha': return 'Data Entry Portal';
+      case 'waaree': return 'Waaree Site Dashboard';
       case 'finance': return 'Accounts & Finance';
       case 'procurement': return 'Procurement Team';
       case 'pm': return 'Project Manager Dashboard';
@@ -285,12 +288,13 @@ const App: React.FC = () => {
                 </div>
               ) : (
                 <>
-                  {auth.role === 'maha' && (
+                  {(auth.role === 'maha' || auth.role === 'waaree') && (
                     <MahaDashboard 
                       onSaveDPR={handleSaveDPR} 
                       onSaveMaterialRequest={handleSaveMaterialRequest}
                       recentDPRs={dprRecords}
                       recentRequests={materialRequests}
+                      defaultProjectName={auth.role === 'waaree' ? 'Waaree Solar Project' : undefined}
                     />
                   )}
                   {auth.role === 'dpr' && (
