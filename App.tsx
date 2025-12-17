@@ -132,8 +132,10 @@ const App: React.FC = () => {
   };
 
   const handleSaveDPR = async (newRecord: DPRRecord) => {
+    // 1. Optimistic Update (Show in UI immediately)
     setDprRecords(prev => [newRecord, ...prev]);
 
+    // 2. Prepare Payload
     const dbPayload = {
       id: newRecord.id,
       date: newRecord.date,
@@ -146,17 +148,39 @@ const App: React.FC = () => {
       machinery: newRecord.machinery,
       safety_observations: newRecord.safetyObservations,
       risks_and_delays: newRecord.risksAndDelays,
-      photos: newRecord.photos // Save photos array
+      photos: newRecord.photos
     };
 
+    // 3. Attempt Insert
     const { error } = await supabase.from('dpr_records').insert([dbPayload]);
 
     if (error) {
       console.error('Error saving DPR:', error.message || error);
-      // Even if server save fails (e.g. column missing), UI state is updated.
-      // alert('Failed to save to database: ' + (error.message || 'Unknown error'));
+      
+      // INTELLIGENT FALLBACK:
+      // If the database is missing the 'photos' column, we retry the insert WITHOUT the photos.
+      // Error code 42703 is "undefined_column" in Postgres.
+      if (error.message?.includes('photos') || error.code === '42703') {
+        const { photos, ...safePayload } = dbPayload;
+        console.warn('Retrying insert without photos column...');
+        
+        const { error: retryError } = await supabase.from('dpr_records').insert([safePayload]);
+        
+        if (!retryError) {
+           createNotification('pm', `New DPR submitted (Photos pending DB update) for ${newRecord.projectName}`, 'info', newRecord.projectName);
+           alert("Report saved successfully! \n\nNote: Photos were not saved because the 'photos' column is missing in the database. Please run the SQL update.");
+           return;
+        } else {
+           // If retry fails, revert optimistic update
+           setDprRecords(prev => prev.filter(r => r.id !== newRecord.id));
+           alert('Failed to save to database: ' + (retryError.message || 'Unknown error'));
+        }
+      } else {
+         // Revert optimistic update for other errors
+         setDprRecords(prev => prev.filter(r => r.id !== newRecord.id));
+         alert('Failed to save to database: ' + (error.message || 'Unknown error'));
+      }
     } else {
-      // alert('DPR Submitted Successfully!');
       createNotification('pm', `New DPR submitted for ${newRecord.projectName}`, 'info', newRecord.projectName);
     }
   };
@@ -180,6 +204,7 @@ const App: React.FC = () => {
       
     if (error) {
       console.error('Error saving Request:', error.message || error);
+      setMaterialRequests(prev => prev.filter(r => r.id !== newRequest.id));
       alert('Failed to save request to server: ' + (error.message || 'Unknown error'));
     } else {
       alert('Material Request Sent to Procurement!');
