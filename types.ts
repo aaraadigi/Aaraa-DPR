@@ -94,6 +94,8 @@ export interface Notification {
   timestamp: number;
   type: 'info' | 'success' | 'warning';
   projectName?: string;
+  targetRole: UserRole | 'all'; // Updated: Determines who sees this notification
+  read: boolean; // Updated: To track read status
 }
 
 export interface AuthState {

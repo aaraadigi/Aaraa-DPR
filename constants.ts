@@ -131,7 +131,7 @@ export const PROJECTS_DATA: Project[] = [
     id: 'p6',
     name: 'Waaree Road Project',
     location: 'Industrial Estate, Chennai',
-    siteEngineer: 'Sakthi Vignesh',
+    siteEngineer: 'Vivek',
     projectManager: 'Muthu',
     progress: 0, 
     status: 'On Track'

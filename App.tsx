@@ -27,7 +27,7 @@ const App: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>(PROJECTS_DATA);
   const [tasks, setTasks] = useState<ProjectTask[]>(INITIAL_TASKS);
   
-  // Notifications for PM
+  // Centralized Notifications
   const [notifications, setNotifications] = useState<Notification[]>([]);
   
   const [loading, setLoading] = useState(false);
@@ -49,7 +49,7 @@ const App: React.FC = () => {
           date: item.date,
           timestamp: item.timestamp,
           submittedBy: item.submitted_by,
-          projectName: item.project_name || '', // Fetch project name
+          projectName: item.project_name || '',
           labour: item.labour || [],
           materials: item.materials || [],
           activities: item.activities || [],
@@ -77,7 +77,6 @@ const App: React.FC = () => {
              date: item.date,
              timestamp: item.timestamp,
              requestedBy: item.requested_by,
-             // Direct mapping from DB column now that SQL is applied
              projectName: item.project_name || 'Unknown Project',
              items: item.items || [],
              urgency: item.urgency,
@@ -115,6 +114,20 @@ const App: React.FC = () => {
     });
     setDprRecords([]);
     setMaterialRequests([]);
+    setNotifications([]);
+  };
+
+  const createNotification = (targetRole: UserRole | 'all', message: string, type: 'info' | 'success' | 'warning', projectName?: string) => {
+    const newNote: Notification = {
+      id: `notif-${Date.now()}-${Math.random()}`,
+      timestamp: Date.now(),
+      message,
+      type,
+      targetRole,
+      projectName,
+      read: false
+    };
+    setNotifications(prev => [newNote, ...prev]);
   };
 
   const handleSaveDPR = async (newRecord: DPRRecord) => {
@@ -125,7 +138,7 @@ const App: React.FC = () => {
       date: newRecord.date,
       timestamp: newRecord.timestamp,
       submitted_by: newRecord.submittedBy,
-      project_name: newRecord.projectName, // Save project name
+      project_name: newRecord.projectName,
       labour: newRecord.labour,
       materials: newRecord.materials,
       activities: newRecord.activities,
@@ -134,19 +147,17 @@ const App: React.FC = () => {
       risks_and_delays: newRecord.risksAndDelays
     };
 
-    const { error } = await supabase
-      .from('dpr_records')
-      .insert([dbPayload]);
+    const { error } = await supabase.from('dpr_records').insert([dbPayload]);
 
     if (error) {
       console.error('Error saving DPR:', error.message || error);
       alert('Failed to save to database: ' + (error.message || 'Unknown error'));
     } else {
       alert('DPR Submitted Successfully!');
+      createNotification('pm', `New DPR submitted for ${newRecord.projectName}`, 'info', newRecord.projectName);
     }
   };
 
-  // Step 1: SE Raises Indent
   const handleSaveMaterialRequest = async (newRequest: MaterialRequest) => {
     setMaterialRequests(prev => [newRequest, ...prev]);
 
@@ -155,28 +166,32 @@ const App: React.FC = () => {
       date: newRequest.date,
       timestamp: newRequest.timestamp,
       requested_by: newRequest.requestedBy,
-      project_name: newRequest.projectName, // Direct save to column
+      project_name: newRequest.projectName,
       items: newRequest.items,
       urgency: newRequest.urgency,
       status: newRequest.status,
       notes: newRequest.notes
     };
 
-    const { error } = await supabase
-      .from('material_requests')
-      .insert([dbPayload]);
+    const { error } = await supabase.from('material_requests').insert([dbPayload]);
       
     if (error) {
       console.error('Error saving Request:', error.message || error);
       alert('Failed to save request to server: ' + (error.message || 'Unknown error'));
     } else {
       alert('Material Request Sent to Procurement!');
+      // Notify Procurement
+      createNotification('procurement', `New Indent: ${newRequest.items[0].material} + ${newRequest.items.length - 1} more`, 'warning', newRequest.projectName);
     }
   };
 
-  // Central Logic for Status Transitions
+  // Central Logic for Status Transitions and Cross-Department Notifications
   const handleUpdateIndentStatus = async (id: string, newStatus: string, payload: any = {}) => {
-    // Optimistic Update
+    // 1. Find the request to get project details for notification
+    const request = materialRequests.find(r => r.id === id);
+    const projectName = request?.projectName;
+
+    // 2. Optimistic Update
     setMaterialRequests(prev => prev.map(req => {
       if (req.id === id) {
         return { ...req, status: newStatus as any, ...payload };
@@ -184,60 +199,71 @@ const App: React.FC = () => {
       return req;
     }));
 
-    // DB Update
+    // 3. Trigger Notifications based on workflow
+    switch (newStatus) {
+      case 'Pending_PM':
+        createNotification('pm', `Indent waiting approval (Checked by Procurement)`, 'info', projectName);
+        break;
+      case 'Returned_To_SE':
+        createNotification('se', `Indent returned by Procurement`, 'warning', projectName);
+        break;
+      case 'Approved_By_PM':
+        createNotification('procurement', `PM Approved Indent for ${projectName}`, 'success', projectName);
+        break;
+      case 'Rejected_By_PM':
+        createNotification('se', `Indent Rejected by PM`, 'warning', projectName);
+        createNotification('procurement', `Indent Rejected by PM`, 'info', projectName);
+        break;
+      case 'PO_Raised':
+        createNotification('se', `PO Raised! Materials arriving soon.`, 'success', projectName);
+        createNotification('finance', `PO Raised for ${projectName}`, 'info', projectName);
+        break;
+      case 'Goods_Received':
+        createNotification('finance', `GRN Verified. Pending Payment.`, 'warning', projectName);
+        createNotification('procurement', `Goods Received at Site`, 'success', projectName);
+        break;
+      case 'Closed':
+        createNotification('se', `Indent Closed & Paid`, 'success', projectName);
+        break;
+    }
+
+    // 4. DB Update
     const snakePayload: any = { status: newStatus };
     if (payload.procurementComments) snakePayload.procurement_comments = payload.procurementComments;
     if (payload.pmComments) snakePayload.pm_comments = payload.pmComments;
     if (payload.poNumber) snakePayload.po_number = payload.poNumber;
     if (payload.grnDetails) snakePayload.grn_details = payload.grnDetails;
 
-    const { error } = await supabase
-      .from('material_requests')
-      .update(snakePayload)
-      .eq('id', id);
+    const { error } = await supabase.from('material_requests').update(snakePayload).eq('id', id);
 
     if (error) {
       console.error('Error updating status:', error);
       alert('Failed to update status in database.');
-    } else {
-        // Optional: Trigger Notification based on status change
-        if (newStatus === 'Pending_PM') {
-             setNotifications(prev => [{ id: `n-${Date.now()}`, message: 'New Indent waiting for approval', timestamp: Date.now(), type: 'info', projectName: 'Procurement' }, ...prev]);
-        }
     }
   };
 
-  // PM Assigns Task
   const handleAssignTask = (newTask: ProjectTask) => {
     setTasks(prev => [...prev, newTask]);
+    const project = projects.find(p => p.id === newTask.projectId);
+    createNotification('se', `New Task Assigned: ${newTask.description}`, 'info', project?.name);
     alert('Task Assigned to Site Engineer');
   };
 
-  // SE Updates Task -> Triggers Notification for PM
   const handleUpdateTask = (taskId: string, status: ProjectTask['status'], updates?: string) => {
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status, updates: updates || t.updates } : t));
     
-    // Create Notification
     const task = tasks.find(t => t.id === taskId);
     const project = projects.find(p => p.id === task?.projectId);
     
     if (task && project) {
-      const newNotification: Notification = {
-        id: `notif-${Date.now()}`,
-        timestamp: Date.now(),
-        type: 'info',
-        projectName: project.name,
-        message: `Task updated: "${task.description}" marked as ${status}. ${updates ? `Note: ${updates}` : ''}`
-      };
-      setNotifications(prev => [newNotification, ...prev]);
+      createNotification('pm', `Task "${task.description}" marked as ${status}`, 'info', project.name);
     }
   };
 
   const handleClearNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
   };
 
-  // SE Updates Project Progress
   const handleUpdateProjectProgress = (projectId: string, progress: number) => {
     setProjects(prev => prev.map(p => p.id === projectId ? { ...p, progress } : p));
   };
@@ -254,14 +280,11 @@ const App: React.FC = () => {
     }
   };
 
-  // Helper to filter and personalize projects for SE
+  // Helper to filter projects for SE
   const getSEProjects = () => {
-    // If it's Sakthi or Vivek, show only Project 6 (Waaree)
-    if (auth.user === 'Sakthi Vignesh' || auth.user === 'Vivek') {
+    if (auth.user === 'Vivek') {
       return projects.filter(p => p.id === 'p6').map(p => ({
         ...p,
-        // Dynamically override the site engineer name to match the current user
-        // This ensures the reports are tagged correctly in SEDashboard
         siteEngineer: auth.user || p.siteEngineer
       }));
     }
@@ -270,11 +293,25 @@ const App: React.FC = () => {
 
   // Helper to filter projects for PM
   const getPMProjects = () => {
-    // If it's Muthu, show only Project 6 (Waaree)
     if (auth.user === 'Muthu') {
       return projects.filter(p => p.id === 'p6');
     }
     return projects;
+  };
+
+  // Filter notifications for the current user
+  const getUserNotifications = () => {
+    return notifications.filter(n => {
+      // 1. Role match
+      if (n.targetRole !== 'all' && n.targetRole !== auth.role) return false;
+      
+      // 2. Project match for specialized users (Muthu/Vivek)
+      if (auth.user === 'Muthu' || auth.user === 'Vivek') {
+         // Only show system notes or notes for Waaree
+         return !n.projectName || n.projectName === 'Waaree Road Project';
+      }
+      return true;
+    }).filter(n => !n.read);
   };
 
   return (
@@ -301,7 +338,9 @@ const App: React.FC = () => {
             <DashboardHeader 
               userRole={auth.role || ''} 
               onLogout={handleLogout}
-              title={getHeaderTitle()} 
+              title={getHeaderTitle()}
+              notifications={getUserNotifications()}
+              onClearNotification={handleClearNotification}
             />
             
             <main className="flex-grow">
@@ -343,7 +382,7 @@ const App: React.FC = () => {
                     <PMDashboard 
                       projects={getPMProjects()}
                       tasks={tasks}
-                      notifications={notifications}
+                      notifications={getUserNotifications()} // Pass filtered list
                       requests={materialRequests}
                       onAssignTask={handleAssignTask}
                       onClearNotification={handleClearNotification}
