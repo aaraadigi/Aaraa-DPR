@@ -33,6 +33,7 @@ export interface DPRRecord {
   machinery: string;
   safetyObservations: string;
   risksAndDelays: string;
+  photos?: string[]; // Array of base64 image strings
 }
 
 export interface RequestItem {

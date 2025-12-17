@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Download, Printer, ChevronDown, ChevronUp, FileText, Package, AlertCircle, Clock, ArrowLeft } from 'lucide-react';
+import { Calendar, Download, Printer, ChevronDown, ChevronUp, FileText, Package, AlertCircle, Clock, ArrowLeft, Camera } from 'lucide-react';
 import { GlassCard } from './ui/GlassCard';
 import { DPRRecord, MaterialRequest } from '../types';
 
@@ -200,6 +200,22 @@ export const DPRViewer: React.FC<DPRViewerProps> = ({ records, materialRequests,
                                )) : <span className="text-sm text-slate-400 italic">No materials recorded</span>}
                             </div>
                           </div>
+
+                          {/* Photos Section */}
+                          {record.photos && record.photos.length > 0 && (
+                            <div>
+                               <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center">
+                                 <Camera size={14} className="mr-1" /> Site Photos
+                               </h4>
+                               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                 {record.photos.map((photo, idx) => (
+                                   <div key={idx} className="aspect-square rounded-lg overflow-hidden bg-white border border-slate-200">
+                                     <img src={photo} alt="Site" className="w-full h-full object-cover" />
+                                   </div>
+                                 ))}
+                               </div>
+                            </div>
+                          )}
                         </div>
 
                         {/* Right Column */}

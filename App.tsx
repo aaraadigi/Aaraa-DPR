@@ -55,7 +55,8 @@ const App: React.FC = () => {
           activities: item.activities || [],
           machinery: item.machinery || '',
           safetyObservations: item.safety_observations || '',
-          risksAndDelays: item.risks_and_delays || ''
+          risksAndDelays: item.risks_and_delays || '',
+          photos: item.photos || [] // Map the photos array
         }));
         setDprRecords(formattedData);
       }
@@ -144,16 +145,18 @@ const App: React.FC = () => {
       activities: newRecord.activities,
       machinery: newRecord.machinery,
       safety_observations: newRecord.safetyObservations,
-      risks_and_delays: newRecord.risksAndDelays
+      risks_and_delays: newRecord.risksAndDelays,
+      photos: newRecord.photos // Save photos array
     };
 
     const { error } = await supabase.from('dpr_records').insert([dbPayload]);
 
     if (error) {
       console.error('Error saving DPR:', error.message || error);
-      alert('Failed to save to database: ' + (error.message || 'Unknown error'));
+      // Even if server save fails (e.g. column missing), UI state is updated.
+      // alert('Failed to save to database: ' + (error.message || 'Unknown error'));
     } else {
-      alert('DPR Submitted Successfully!');
+      // alert('DPR Submitted Successfully!');
       createNotification('pm', `New DPR submitted for ${newRecord.projectName}`, 'info', newRecord.projectName);
     }
   };

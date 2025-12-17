@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Save, AlertCircle, HardHat, Hammer, Truck, ShieldAlert, Plus, X, Building2 } from 'lucide-react';
+import { Save, AlertCircle, HardHat, Hammer, Truck, ShieldAlert, Plus, X, Building2, Camera, Image as ImageIcon } from 'lucide-react';
 import { GlassCard } from './ui/GlassCard';
 import { LABOUR_CATEGORIES, MATERIAL_TYPES } from '../constants';
 import { DPRRecord, LabourEntry, MaterialEntry, ActivityEntry } from '../types';
@@ -27,6 +27,7 @@ export const DPREntryForm: React.FC<DPREntryFormProps> = ({ onSave, defaultProje
   const [machinery, setMachinery] = useState('');
   const [safety, setSafety] = useState('');
   const [risks, setRisks] = useState('');
+  const [photos, setPhotos] = useState<string[]>([]);
   
   // Custom Material State
   const [customMatName, setCustomMatName] = useState('');
@@ -101,6 +102,32 @@ export const DPREntryForm: React.FC<DPREntryFormProps> = ({ onSave, defaultProje
     }
   };
 
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      if (photos.length + files.length > 5) {
+        alert("You can only upload a maximum of 5 photos.");
+        return;
+      }
+      
+      // Changed from Array.from(files).forEach to for-loop to fix TS inference issue with FileList
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (reader.result) {
+            setPhotos(prev => [...prev, reader.result as string]);
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotos(photos.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = () => {
     const newRecord: DPRRecord = {
       id: `dpr-${Date.now()}`,
@@ -116,7 +143,8 @@ export const DPREntryForm: React.FC<DPREntryFormProps> = ({ onSave, defaultProje
       activities: activities.filter(a => a.description.trim() !== ''),
       machinery,
       safetyObservations: safety,
-      risksAndDelays: risks
+      risksAndDelays: risks,
+      photos
     };
     onSave(newRecord);
   };
@@ -126,6 +154,7 @@ export const DPREntryForm: React.FC<DPREntryFormProps> = ({ onSave, defaultProje
     { id: 2, label: 'Activity', icon: Hammer },
     { id: 3, label: 'Material', icon: Truck },
     { id: 4, label: 'Safety', icon: ShieldAlert },
+    { id: 5, label: 'Photos', icon: Camera },
   ];
 
   return (
@@ -449,8 +478,60 @@ export const DPREntryForm: React.FC<DPREntryFormProps> = ({ onSave, defaultProje
                     rows={3}
                   />
                 </div>
+              </div>
+            )}
 
-                <div className="pt-6">
+            {step === 5 && (
+              <div className="space-y-6">
+                <h3 className="text-xl font-bold text-slate-800 flex items-center">
+                  <Camera className="mr-2 text-aaraa-blue" />
+                  Site Photos
+                </h3>
+                
+                <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center bg-slate-50 transition-colors hover:bg-slate-100 hover:border-aaraa-blue/50 group">
+                   <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm group-hover:scale-110 transition-transform">
+                     <ImageIcon size={32} className="text-slate-400 group-hover:text-aaraa-blue" />
+                   </div>
+                   <h4 className="font-bold text-slate-700">Upload Site Photos</h4>
+                   <p className="text-sm text-slate-500 mb-6">Select up to 5 photos of progress, issues, or completion.</p>
+                   
+                   <input 
+                    type="file" 
+                    id="photo-upload" 
+                    multiple 
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                   />
+                   <label 
+                     htmlFor="photo-upload"
+                     className="bg-slate-900 text-white px-6 py-3 rounded-full font-bold cursor-pointer hover:bg-slate-800 transition-colors"
+                   >
+                     Select Files
+                   </label>
+                </div>
+
+                {photos.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                    {photos.map((photo, index) => (
+                      <div key={index} className="relative group aspect-square rounded-xl overflow-hidden border border-slate-200 bg-white">
+                        <img 
+                          src={photo} 
+                          alt={`Site upload ${index + 1}`} 
+                          className="w-full h-full object-cover"
+                        />
+                        <button 
+                          onClick={() => removePhoto(index)}
+                          className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="pt-6 border-t border-slate-100 mt-6">
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -475,9 +556,9 @@ export const DPREntryForm: React.FC<DPREntryFormProps> = ({ onSave, defaultProje
         >
           Back
         </button>
-        {step < 4 && (
+        {step < 5 && (
           <button 
-            onClick={() => setStep(Math.min(4, step + 1))}
+            onClick={() => setStep(Math.min(5, step + 1))}
             className="px-6 py-2 rounded-full bg-slate-800 text-white shadow-md hover:bg-slate-700 transition-colors"
           >
             Next Step
