@@ -25,6 +25,9 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       onLogin('maha', 'Maha');
     } else if (cleanUser === 'dpr' && cleanPass === '123') {
       onLogin('dpr', 'DPR Viewer');
+    } else if (cleanUser === 'ai1009' && cleanPass === '123') {
+      // New User: Mahalakshmi (Document Executive) - Read Only
+      onLogin('dpr', 'Mahalakshmi');
     } else if (cleanUser === 'finance' && cleanPass === '123') {
       onLogin('finance', 'Accounts Dept');
     } else if (cleanUser === 'procurement' && cleanPass === '123') {

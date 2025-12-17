@@ -297,6 +297,11 @@ const App: React.FC = () => {
   };
 
   const getHeaderTitle = () => {
+    // Custom logic for the Document Executive
+    if (auth.user === 'Mahalakshmi') {
+      return 'Document Executive Portal';
+    }
+
     switch (auth.role) {
       case 'maha': return 'Data Entry Portal';
       case 'waaree': return 'Waaree Site Dashboard';
