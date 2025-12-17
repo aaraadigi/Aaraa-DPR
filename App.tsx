@@ -254,6 +254,29 @@ const App: React.FC = () => {
     }
   };
 
+  // Helper to filter and personalize projects for SE
+  const getSEProjects = () => {
+    // If it's Sakthi or Vivek, show only Project 6 (Waaree)
+    if (auth.user === 'Sakthi Vignesh' || auth.user === 'Vivek') {
+      return projects.filter(p => p.id === 'p6').map(p => ({
+        ...p,
+        // Dynamically override the site engineer name to match the current user
+        // This ensures the reports are tagged correctly in SEDashboard
+        siteEngineer: auth.user || p.siteEngineer
+      }));
+    }
+    return projects;
+  };
+
+  // Helper to filter projects for PM
+  const getPMProjects = () => {
+    // If it's Muthu, show only Project 6 (Waaree)
+    if (auth.user === 'Muthu') {
+      return projects.filter(p => p.id === 'p6');
+    }
+    return projects;
+  };
+
   return (
     <div className="min-h-screen flex flex-col font-inter text-slate-800">
       <AnimatePresence mode="wait">
@@ -294,7 +317,7 @@ const App: React.FC = () => {
                       onSaveMaterialRequest={handleSaveMaterialRequest}
                       recentDPRs={dprRecords}
                       recentRequests={materialRequests}
-                      defaultProjectName={auth.role === 'waaree' ? 'Waaree Solar Project' : undefined}
+                      defaultProjectName={auth.role === 'waaree' ? 'Waaree Road Project' : undefined}
                     />
                   )}
                   {auth.role === 'dpr' && (
@@ -318,7 +341,7 @@ const App: React.FC = () => {
                   )}
                   {auth.role === 'pm' && (
                     <PMDashboard 
-                      projects={projects}
+                      projects={getPMProjects()}
                       tasks={tasks}
                       notifications={notifications}
                       requests={materialRequests}
@@ -329,13 +352,14 @@ const App: React.FC = () => {
                   )}
                   {auth.role === 'se' && (
                     <SEDashboard 
-                      projects={projects}
+                      projects={getSEProjects()}
                       tasks={tasks}
                       requests={materialRequests}
                       onUpdateTask={handleUpdateTask}
                       onUpdateProjectProgress={handleUpdateProjectProgress}
                       onSaveMaterialRequest={handleSaveMaterialRequest}
                       onUpdateIndentStatus={handleUpdateIndentStatus}
+                      onSaveDPR={handleSaveDPR}
                     />
                   )}
                 </>

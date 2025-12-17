@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, MapPin, User, ArrowRight, Plus, Calendar, CheckCircle2, Circle, AlertCircle, ChevronLeft, Bell, X, PackageCheck, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Building2, MapPin, User, ArrowRight, Plus, Calendar, CheckCircle2, Circle, AlertCircle, ChevronLeft, Bell, X, PackageCheck, ThumbsUp, ThumbsDown, Briefcase } from 'lucide-react';
 import { GlassCard } from './ui/GlassCard';
 import { Project, ProjectTask, Notification, MaterialRequest } from '../types';
 
@@ -238,7 +238,7 @@ export const PMDashboard: React.FC<PMDashboardProps> = ({
           >
             <div className="mb-8">
               <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Project Overview</h2>
-              <p className="text-slate-500 mt-2">Monitor progress across all 5 ongoing sites.</p>
+              <p className="text-slate-500 mt-2">Monitor progress across active sites.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -269,9 +269,17 @@ export const PMDashboard: React.FC<PMDashboardProps> = ({
                   </div>
 
                   <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-100">
-                    <div className="flex items-center text-xs font-medium text-slate-600">
-                      <User size={14} className="mr-1" />
-                      {project.siteEngineer}
+                    <div className="flex flex-col">
+                      <div className="flex items-center text-xs font-medium text-slate-600 mb-1">
+                        <User size={12} className="mr-1" />
+                        {project.siteEngineer}
+                      </div>
+                      {project.projectManager && (
+                         <div className="flex items-center text-xs font-medium text-slate-500">
+                           <Briefcase size={12} className="mr-1" />
+                           {project.projectManager}
+                         </div>
+                      )}
                     </div>
                     <div className="flex items-center text-aaraa-blue font-semibold text-sm">
                       View Details <ArrowRight size={14} className="ml-1" />
@@ -314,7 +322,11 @@ export const PMDashboard: React.FC<PMDashboardProps> = ({
                       <p className="text-xs text-slate-400 uppercase font-bold">Site Engineer</p>
                       <p className="text-sm font-semibold text-slate-700 mt-1">{selectedProject.siteEngineer}</p>
                     </div>
-                    <div className="p-3 bg-slate-50 rounded-xl">
+                     <div className="p-3 bg-slate-50 rounded-xl">
+                      <p className="text-xs text-slate-400 uppercase font-bold">Manager</p>
+                      <p className="text-sm font-semibold text-slate-700 mt-1">{selectedProject.projectManager || 'N/A'}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-xl col-span-2">
                       <p className="text-xs text-slate-400 uppercase font-bold">Status</p>
                       <p className={`text-sm font-semibold mt-1 ${
                          selectedProject.status === 'Delayed' ? 'text-red-600' : 'text-green-600'

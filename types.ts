@@ -1,3 +1,4 @@
+
 export type UserRole = 'maha' | 'dpr' | 'finance' | 'procurement' | 'pm' | 'se' | 'waaree' | null;
 
 export interface LabourEntry {
@@ -72,6 +73,7 @@ export interface Project {
   name: string;
   location: string;
   siteEngineer: string;
+  projectManager?: string; // Added to track PM assignment
   progress: number; // 0 to 100
   status: 'On Track' | 'Delayed' | 'Completed';
 }

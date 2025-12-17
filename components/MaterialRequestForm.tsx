@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Package, Plus, Trash2, Send, Building2 } from 'lucide-react';
 import { GlassCard } from './ui/GlassCard';
 import { MaterialRequest, RequestItem } from '../types';
+import { MATERIAL_INDENT_SUGGESTIONS } from '../constants';
 
 interface MaterialRequestFormProps {
   projectName?: string;
@@ -92,6 +93,7 @@ export const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({ projec
                 <div className="flex-grow w-full md:w-auto">
                   <input 
                     type="text" 
+                    list="material-suggestions-list"
                     placeholder="Material Name (e.g. Cement)" 
                     value={item.material}
                     onChange={(e) => updateItem(idx, 'material', e.target.value)}
@@ -185,6 +187,13 @@ export const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({ projec
             </motion.button>
           </div>
         </div>
+
+        {/* Datalist for Auto-Suggestions */}
+        <datalist id="material-suggestions-list">
+          {MATERIAL_INDENT_SUGGESTIONS.map((suggestion, index) => (
+            <option key={index} value={suggestion} />
+          ))}
+        </datalist>
       </GlassCard>
     </div>
   );

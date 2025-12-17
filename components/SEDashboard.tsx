@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, CheckSquare, Clock, ArrowRight, Save, LayoutDashboard, Package, Plus, Truck, CheckCircle2 } from 'lucide-react';
+import { Building2, CheckSquare, Clock, ArrowRight, Save, LayoutDashboard, Package, Plus, Truck, CheckCircle2, FileText } from 'lucide-react';
 import { GlassCard } from './ui/GlassCard';
-import { Project, ProjectTask, MaterialRequest } from '../types';
+import { Project, ProjectTask, MaterialRequest, DPRRecord } from '../types';
 import { MaterialRequestForm } from './MaterialRequestForm';
+import { DPREntryForm } from './DPREntryForm';
 
 interface SEDashboardProps {
   projects: Project[];
@@ -13,6 +14,7 @@ interface SEDashboardProps {
   onUpdateProjectProgress: (projectId: string, progress: number) => void;
   onSaveMaterialRequest?: (req: MaterialRequest) => void;
   onUpdateIndentStatus?: (id: string, status: string, payload?: any) => void;
+  onSaveDPR: (data: DPRRecord) => void;
 }
 
 export const SEDashboard: React.FC<SEDashboardProps> = ({ 
@@ -22,15 +24,22 @@ export const SEDashboard: React.FC<SEDashboardProps> = ({
   onUpdateTask, 
   onUpdateProjectProgress,
   onSaveMaterialRequest,
-  onUpdateIndentStatus
+  onUpdateIndentStatus,
+  onSaveDPR
 }) => {
-  const [activeTab, setActiveTab] = useState<'tasks' | 'indents'>('tasks');
+  const [activeTab, setActiveTab] = useState<'tasks' | 'indents' | 'dpr'>('tasks');
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [editingTask, setEditingTask] = useState<string | null>(null);
   const [taskNote, setTaskNote] = useState('');
   const [showIndentForm, setShowIndentForm] = useState(false);
   const [grnNote, setGrnNote] = useState('');
   const [selectedReqId, setSelectedReqId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (projects.length === 1) {
+      setSelectedProjectId(projects[0].id);
+    }
+  }, [projects]);
 
   const currentProject = projects.find(p => p.id === selectedProjectId);
   const projectTasks = tasks.filter(t => t.projectId === selectedProjectId);
@@ -51,6 +60,26 @@ export const SEDashboard: React.FC<SEDashboardProps> = ({
       setGrnNote('');
       setSelectedReqId(null);
     }
+  };
+
+  const handleDPRSubmit = (data: DPRRecord) => {
+    // Explicitly set the Site Engineer's name so PM/Admin sees "Sakthi Vignesh" instead of generic ID
+    const enrichedData = {
+      ...data,
+      submittedBy: currentProject?.siteEngineer || 'Site Engineer',
+    };
+    onSaveDPR(enrichedData);
+    setActiveTab('tasks');
+    alert("Daily Report Submitted Successfully!");
+  };
+
+  const handleMaterialRequestSubmit = (data: MaterialRequest) => {
+    const enrichedRequest = {
+      ...data,
+      requestedBy: currentProject?.siteEngineer || 'Site Engineer',
+    };
+    if (onSaveMaterialRequest) onSaveMaterialRequest(enrichedRequest);
+    setShowIndentForm(false);
   };
 
   if (!selectedProjectId) {
@@ -95,10 +124,7 @@ export const SEDashboard: React.FC<SEDashboardProps> = ({
         </button>
         <MaterialRequestForm 
           projectName={currentProject?.name}
-          onSave={(data) => {
-            if (onSaveMaterialRequest) onSaveMaterialRequest(data);
-            setShowIndentForm(false);
-          }}
+          onSave={handleMaterialRequestSubmit}
           onCancel={() => setShowIndentForm(false)}
         />
       </div>
@@ -113,33 +139,41 @@ export const SEDashboard: React.FC<SEDashboardProps> = ({
           <p className="text-slate-500 text-sm">Site Engineer Portal</p>
         </div>
         <div className="flex space-x-4">
-           <button 
-            onClick={() => setSelectedProjectId('')}
-            className="text-sm text-slate-500 font-medium hover:text-aaraa-blue"
-          >
-            Switch Site
-          </button>
+           {projects.length > 1 && (
+             <button 
+              onClick={() => setSelectedProjectId('')}
+              className="text-sm text-slate-500 font-medium hover:text-aaraa-blue"
+            >
+              Switch Site
+            </button>
+           )}
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-2 bg-white/50 p-1 rounded-xl w-fit mb-6">
+      <div className="flex space-x-2 bg-white/50 p-1 rounded-xl w-fit mb-6 overflow-x-auto">
         <button
           onClick={() => setActiveTab('tasks')}
-          className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'tasks' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-100'}`}
+          className={`px-6 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'tasks' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-100'}`}
         >
           My Tasks
         </button>
         <button
           onClick={() => setActiveTab('indents')}
-          className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'indents' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-100'}`}
+          className={`px-6 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'indents' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-100'}`}
         >
           Material Indents
+        </button>
+        <button
+          onClick={() => setActiveTab('dpr')}
+          className={`px-6 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'dpr' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-100'}`}
+        >
+          Daily Report
         </button>
       </div>
 
       <AnimatePresence mode="wait">
-        {activeTab === 'tasks' ? (
+        {activeTab === 'tasks' && (
           <motion.div
              key="tasks"
              initial={{ opacity: 0, y: 10 }}
@@ -174,49 +208,57 @@ export const SEDashboard: React.FC<SEDashboardProps> = ({
 
             {/* Tasks List */}
             <div className="lg:col-span-2 space-y-4">
-               {projectTasks.map(task => (
-                  <GlassCard key={task.id} className="relative overflow-hidden">
-                    <div className="flex justify-between items-start mb-3">
-                      <h4 className={`font-bold text-lg ${task.status === 'Completed' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
-                        {task.description}
-                      </h4>
-                      <span className={`px-2 py-1 rounded-md text-xs font-bold uppercase ${
-                        task.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                        task.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
-                        'bg-amber-100 text-amber-700'
-                      }`}>
-                        {task.status}
-                      </span>
-                    </div>
-
-                    <div className="text-xs text-slate-500 mb-4 flex items-center">
-                      <Clock size={12} className="mr-1" /> Due: {new Date(task.dueDate).toLocaleDateString()}
-                    </div>
-
-                    {editingTask === task.id ? (
-                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                        <input 
-                          type="text" 
-                          value={taskNote}
-                          onChange={(e) => setTaskNote(e.target.value)}
-                          placeholder="Update notes..."
-                          className="w-full p-2 text-sm border border-slate-300 rounded mb-3 focus:outline-none focus:border-aaraa-blue"
-                        />
-                        <div className="flex gap-2">
-                          <button onClick={() => handleTaskUpdate(task.id, 'In Progress')} className="flex-1 py-1.5 bg-blue-100 text-blue-700 text-xs font-bold rounded">In Progress</button>
-                          <button onClick={() => handleTaskUpdate(task.id, 'Completed')} className="flex-1 py-1.5 bg-green-100 text-green-700 text-xs font-bold rounded">Completed</button>
-                        </div>
+               {projectTasks.length === 0 ? (
+                 <div className="text-center py-10 bg-white/50 rounded-xl border border-dashed border-slate-200">
+                   <p className="text-slate-400">No tasks assigned yet.</p>
+                 </div>
+               ) : (
+                 projectTasks.map(task => (
+                    <GlassCard key={task.id} className="relative overflow-hidden">
+                      <div className="flex justify-between items-start mb-3">
+                        <h4 className={`font-bold text-lg ${task.status === 'Completed' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+                          {task.description}
+                        </h4>
+                        <span className={`px-2 py-1 rounded-md text-xs font-bold uppercase ${
+                          task.status === 'Completed' ? 'bg-green-100 text-green-700' :
+                          task.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
+                          'bg-amber-100 text-amber-700'
+                        }`}>
+                          {task.status}
+                        </span>
                       </div>
-                    ) : (
-                       task.status !== 'Completed' && (
-                         <button onClick={() => setEditingTask(task.id)} className="w-full py-2 bg-slate-800 text-white text-sm font-medium rounded-lg hover:bg-slate-700 transition-colors">Update Status</button>
-                       )
-                    )}
-                  </GlassCard>
-               ))}
+
+                      <div className="text-xs text-slate-500 mb-4 flex items-center">
+                        <Clock size={12} className="mr-1" /> Due: {new Date(task.dueDate).toLocaleDateString()}
+                      </div>
+
+                      {editingTask === task.id ? (
+                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                          <input 
+                            type="text" 
+                            value={taskNote}
+                            onChange={(e) => setTaskNote(e.target.value)}
+                            placeholder="Update notes..."
+                            className="w-full p-2 text-sm border border-slate-300 rounded mb-3 focus:outline-none focus:border-aaraa-blue"
+                          />
+                          <div className="flex gap-2">
+                            <button onClick={() => handleTaskUpdate(task.id, 'In Progress')} className="flex-1 py-1.5 bg-blue-100 text-blue-700 text-xs font-bold rounded">In Progress</button>
+                            <button onClick={() => handleTaskUpdate(task.id, 'Completed')} className="flex-1 py-1.5 bg-green-100 text-green-700 text-xs font-bold rounded">Completed</button>
+                          </div>
+                        </div>
+                      ) : (
+                         task.status !== 'Completed' && (
+                           <button onClick={() => setEditingTask(task.id)} className="w-full py-2 bg-slate-800 text-white text-sm font-medium rounded-lg hover:bg-slate-700 transition-colors">Update Status</button>
+                         )
+                      )}
+                    </GlassCard>
+                 ))
+               )}
             </div>
           </motion.div>
-        ) : (
+        )}
+
+        {activeTab === 'indents' && (
           <motion.div
             key="indents"
             initial={{ opacity: 0, y: 10 }}
@@ -314,6 +356,20 @@ export const SEDashboard: React.FC<SEDashboardProps> = ({
                 ))
               )}
             </div>
+          </motion.div>
+        )}
+
+        {activeTab === 'dpr' && (
+          <motion.div
+            key="dpr"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <DPREntryForm 
+              defaultProjectName={currentProject?.name}
+              onSave={handleDPRSubmit} 
+            />
           </motion.div>
         )}
       </AnimatePresence>

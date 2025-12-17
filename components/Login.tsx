@@ -33,6 +33,15 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       onLogin('pm', 'Project Manager');
     } else if (cleanUser === 'se' && cleanPass === '123') {
       onLogin('se', 'Site Engineer');
+    } else if (cleanUser === 'ai1028' && cleanPass === '123') {
+      // Specific login for Sakthi Vignesh
+      onLogin('se', 'Sakthi Vignesh');
+    } else if (cleanUser === 'ai1024' && cleanPass === '123') {
+      // Specific login for Vivek
+      onLogin('se', 'Vivek');
+    } else if (cleanUser === 'ai1029' && cleanPass === '123') {
+      // Specific login for Muthu (PM for Waaree)
+      onLogin('pm', 'Muthu');
     } else if (cleanUser === 'waaree' && cleanPass === '123') {
       onLogin('waaree', 'Waaree Site Incharge');
     } else {
