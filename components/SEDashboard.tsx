@@ -9,6 +9,8 @@ import { MaterialRequestForm } from './MaterialRequestForm';
 import { DPREntryForm } from './DPREntryForm';
 
 interface SEDashboardProps {
+  // Added userName to fix TS error when passed from App.tsx
+  userName?: string;
   projects: Project[];
   tasks: ProjectTask[];
   requests?: MaterialRequest[]; 
@@ -20,6 +22,8 @@ interface SEDashboardProps {
 }
 
 export const SEDashboard: React.FC<SEDashboardProps> = ({ 
+  // Destructured userName
+  userName,
   projects, tasks, requests = [], onUpdateTask, onUpdateProjectProgress, onSaveMaterialRequest, onUpdateIndentStatus, onSaveDPR
 }) => {
   const [activeTab, setActiveTab] = useState<'tasks' | 'indents' | 'dpr'>('tasks');
@@ -238,7 +242,7 @@ export const SEDashboard: React.FC<SEDashboardProps> = ({
       
       {showIndentForm && (
         <div className="fixed inset-0 z-50 bg-slate-50/95 backdrop-blur-md p-4 overflow-y-auto">
-          <MaterialRequestForm projectName={currentProject?.name} onSave={(data) => { onSaveMaterialRequest?.(data); setShowIndentForm(false); }} onCancel={() => setShowIndentForm(false)} />
+          <MaterialRequestForm projectName={currentProject?.name} userName={userName} onSave={(data) => { onSaveMaterialRequest?.(data); setShowIndentForm(false); }} onCancel={() => setShowIndentForm(false)} />
         </div>
       )}
     </div>

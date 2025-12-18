@@ -66,6 +66,8 @@ export interface MaterialRequest {
   urgency: 'Low' | 'Medium' | 'High';
   status: IndentStatus;
   notes?: string;
+  deadline: string;
+  indentSheetPhoto?: string;
   
   // Workflow fields
   procurementComments?: string;
@@ -116,4 +118,5 @@ export interface AuthState {
   isAuthenticated: boolean;
   role: UserRole;
   user: string | null;
+  userId: string;
 }

@@ -1,22 +1,23 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Package, Plus, Trash2, Send, Building2 } from 'lucide-react';
+import { Package, Plus, Trash2, Send, Building2, Calendar, Camera, X } from 'lucide-react';
 import { GlassCard } from './ui/GlassCard';
 import { MaterialRequest, RequestItem } from '../types';
 import { MATERIAL_INDENT_SUGGESTIONS } from '../constants';
 
 interface MaterialRequestFormProps {
   projectName?: string;
+  userName?: string;
   onSave: (data: MaterialRequest) => void;
   onCancel: () => void;
 }
 
-export const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({ projectName, onSave, onCancel }) => {
-  const [items, setItems] = useState<RequestItem[]>([
-    { material: '', quantity: 0, unit: '' }
-  ]);
+export const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({ projectName, userName, onSave, onCancel }) => {
+  const [items, setItems] = useState<RequestItem[]>([{ material: '', quantity: 0, unit: '' }]);
   const [urgency, setUrgency] = useState<'Low' | 'Medium' | 'High'>('Medium');
+  const [deadline, setDeadline] = useState('');
+  const [indentPhoto, setIndentPhoto] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
 
   const updateItem = (index: number, field: keyof RequestItem, value: string | number) => {
@@ -25,171 +26,101 @@ export const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({ projec
     setItems(newItems);
   };
 
-  const addItem = () => {
-    setItems([...items, { material: '', quantity: 0, unit: '' }]);
-  };
+  const addItem = () => setItems([...items, { material: '', quantity: 0, unit: '' }]);
+  const removeItem = (idx: number) => items.length > 1 && setItems(items.filter((_, i) => i !== idx));
 
-  const removeItem = (index: number) => {
-    if (items.length > 1) {
-      const newItems = [...items];
-      newItems.splice(index, 1);
-      setItems(newItems);
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setIndentPhoto(reader.result as string);
+      reader.readAsDataURL(file);
     }
   };
 
   const handleSubmit = () => {
     const validItems = items.filter(i => i.material.trim() !== '' && i.quantity > 0);
-    
-    if (validItems.length === 0) {
-      alert("Please add at least one valid material.");
-      return;
-    }
+    if (validItems.length === 0) return alert("Add at least one item.");
+    if (!deadline) return alert("Select a deadline.");
 
     const newRequest: MaterialRequest = {
       id: `req-${Date.now()}`,
       date: new Date().toISOString(),
       timestamp: Date.now(),
-      requestedBy: 'Vivek (Site Engineer)',
+      requestedBy: userName || 'Site Engineer',
       projectName: projectName || 'Unknown Project',
       items: validItems,
       urgency,
-      status: 'PM_Review', // Step 2: Transition to Mathiazhagan immediately
+      deadline,
+      indentSheetPhoto: indentPhoto || undefined,
+      status: 'PM_Review', 
       notes
     };
     onSave(newRequest);
   };
 
   return (
-    <div className="max-w-3xl mx-auto pb-20">
+    <div className="max-w-4xl mx-auto pb-20">
       <GlassCard>
         <div className="flex items-center justify-between mb-8 border-b border-slate-100 pb-4">
           <div className="flex items-center space-x-3">
-            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
-              <Package size={24} />
-            </div>
+            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><Package size={24} /></div>
             <div>
               <h2 className="text-xl font-bold text-slate-800 tracking-tight">New Material Indent</h2>
-              <p className="text-sm text-slate-500 font-medium">Step 1: Initiation by Site Engineer</p>
+              <p className="text-sm text-slate-500 font-medium">Step 1: Initiation by {userName}</p>
             </div>
           </div>
-          {projectName && (
-            <div className="px-3 py-1.5 bg-slate-800 text-white rounded-xl flex items-center text-[10px] font-bold uppercase tracking-widest">
-              <Building2 size={12} className="mr-2" />
-              {projectName}
-            </div>
-          )}
+          <div className="px-3 py-1.5 bg-slate-800 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest">
+            {projectName}
+          </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-4">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Requested Inventory</label>
-            {items.map((item, idx) => (
-              <motion.div 
-                key={idx}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="flex flex-col md:flex-row gap-3 items-start md:items-center bg-slate-50 p-4 rounded-2xl border border-slate-200 group transition-all hover:bg-white hover:shadow-sm"
-              >
-                <div className="flex-grow w-full md:w-auto">
-                  <input 
-                    type="text" 
-                    list="material-suggestions-list"
-                    placeholder="Material Name" 
-                    value={item.material}
-                    onChange={(e) => updateItem(idx, 'material', e.target.value)}
-                    className="w-full bg-transparent border-none px-3 py-1 text-sm font-bold text-slate-700 focus:outline-none placeholder:font-normal placeholder:text-slate-400"
-                  />
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Inventory Items</label>
+            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+              {items.map((item, idx) => (
+                <div key={idx} className="flex gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                  <input list="material-suggestions-list" placeholder="Material" value={item.material} onChange={e => updateItem(idx, 'material', e.target.value)} className="flex-1 bg-transparent text-sm font-bold outline-none" />
+                  <input type="number" placeholder="Qty" value={item.quantity || ''} onChange={e => updateItem(idx, 'quantity', parseFloat(e.target.value))} className="w-16 bg-white border rounded p-1 text-sm font-bold" />
+                  <input type="text" placeholder="Unit" value={item.unit} onChange={e => updateItem(idx, 'unit', e.target.value)} className="w-12 bg-white border rounded p-1 text-sm font-bold" />
+                  <button onClick={() => removeItem(idx)} className="text-slate-400 hover:text-red-500"><Trash2 size={16} /></button>
                 </div>
-                <div className="flex space-x-2 w-full md:w-auto">
-                  <input 
-                    type="number" 
-                    placeholder="Qty" 
-                    value={item.quantity || ''}
-                    onChange={(e) => updateItem(idx, 'quantity', parseFloat(e.target.value))}
-                    className="w-24 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold focus:outline-none focus:border-indigo-500"
-                  />
-                  <input 
-                    type="text" 
-                    placeholder="Unit" 
-                    value={item.unit}
-                    onChange={(e) => updateItem(idx, 'unit', e.target.value)}
-                    className="w-20 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-                <button 
-                  onClick={() => removeItem(idx)}
-                  className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                >
-                  <Trash2 size={18} />
-                </button>
-              </motion.div>
-            ))}
-            <button 
-              onClick={addItem}
-              className="flex items-center space-x-2 text-sm font-bold text-indigo-600 hover:text-indigo-700 px-2 py-1 transition-colors"
-            >
-              <Plus size={16} />
-              <span>Add Another Item</span>
-            </button>
+              ))}
+            </div>
+            <button onClick={addItem} className="text-sm font-bold text-indigo-600">+ Add Item</button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+          <div className="space-y-6">
             <div>
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 block">Urgency Status</label>
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Required Deadline</label>
+              <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold" />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Indent Sheet Photo</label>
+              <label className="w-full h-32 border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer overflow-hidden bg-slate-50">
+                {indentPhoto ? <img src={indentPhoto} className="w-full h-full object-cover" /> : <Camera size={24} className="text-slate-300" />}
+                <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
+              </label>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Urgency</label>
               <div className="flex bg-slate-100 p-1 rounded-xl">
-                {(['Low', 'Medium', 'High'] as const).map((level) => (
-                  <button
-                    key={level}
-                    onClick={() => setUrgency(level)}
-                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-                      urgency === level 
-                        ? level === 'High' ? 'bg-red-500 text-white shadow-lg' 
-                        : level === 'Medium' ? 'bg-amber-500 text-white shadow-lg'
-                        : 'bg-green-600 text-white shadow-lg'
-                        : 'text-slate-500 hover:bg-white/50'
-                    }`}
-                  >
-                    {level}
-                  </button>
+                {['Low', 'Medium', 'High'].map(l => (
+                  <button key={l} onClick={() => setUrgency(l as any)} className={`flex-1 py-1.5 text-xs font-bold rounded-lg ${urgency === l ? 'bg-slate-900 text-white' : 'text-slate-500'}`}>{l}</button>
                 ))}
               </div>
             </div>
-            
-            <div>
-               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 block">Special Instructions</label>
-               <textarea 
-                 value={notes}
-                 onChange={(e) => setNotes(e.target.value)}
-                 placeholder="Brands, specific delivery site requirements..."
-                 className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
-                 rows={3}
-               />
-            </div>
-          </div>
-
-          <div className="flex space-x-4 pt-6 border-t border-slate-100 mt-6">
-            <button 
-              onClick={onCancel}
-              className="flex-1 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-slate-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleSubmit}
-              className="flex-[2] py-4 bg-slate-900 text-white rounded-2xl font-bold shadow-xl shadow-slate-900/10 flex items-center justify-center space-x-2 hover:bg-slate-800 transition-all"
-            >
-              <Send size={18} />
-              <span>Submit to PM (Mathiazhagan)</span>
-            </motion.button>
           </div>
         </div>
 
+        <div className="flex space-x-4 mt-8 pt-6 border-t">
+          <button onClick={onCancel} className="flex-1 py-3 bg-white border rounded-xl font-bold">Cancel</button>
+          <button onClick={handleSubmit} className="flex-[2] py-3 bg-slate-900 text-white rounded-xl font-bold">Submit to PM</button>
+        </div>
+
         <datalist id="material-suggestions-list">
-          {MATERIAL_INDENT_SUGGESTIONS.map((suggestion, index) => (
-            <option key={index} value={suggestion} />
-          ))}
+          {MATERIAL_INDENT_SUGGESTIONS.map((s, i) => <option key={i} value={s} />)}
         </datalist>
       </GlassCard>
     </div>
