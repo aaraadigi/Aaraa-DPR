@@ -25,40 +25,75 @@ const App: React.FC = () => {
   const [tasks, setTasks] = useState<ProjectTask[]>(INITIAL_TASKS);
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
+  // Function to map DB items to App items
+  const mapRequest = (item: any): MaterialRequest => ({
+    id: item.id, 
+    date: item.date, 
+    timestamp: item.timestamp, 
+    requestedBy: item.requested_by,
+    projectName: item.project_name, 
+    items: item.items, 
+    urgency: item.urgency,
+    status: item.status, 
+    notes: item.notes, 
+    quotes: item.quotes, 
+    marketAnalysis: item.market_analysis,
+    pmComments: item.pm_comments, 
+    opsComments: item.ops_comments, 
+    mdComments: item.md_comments,
+    paymentRef: item.payment_ref, 
+    grnDetails: item.grn_details, 
+    grnPhotos: item.grn_photos,
+    vendorBillPhoto: item.vendor_bill_photo,
+    costingComments: item.costing_comments
+  });
+
   useEffect(() => {
     if (!auth.isAuthenticated) return;
+
+    // Initial Fetch
     const fetchRequests = async () => {
-      const { data } = await supabase.from('material_requests').select('*').order('timestamp', { ascending: false });
+      const { data } = await supabase
+        .from('material_requests')
+        .select('*')
+        .order('timestamp', { ascending: false });
+      
       if (data) {
-        const mapped: MaterialRequest[] = data.map((item: any) => ({
-          id: item.id, 
-          date: item.date, 
-          timestamp: item.timestamp, 
-          requestedBy: item.requested_by,
-          projectName: item.project_name, 
-          items: item.items, 
-          urgency: item.urgency,
-          status: item.status, 
-          notes: item.notes, 
-          quotes: item.quotes, 
-          marketAnalysis: item.market_analysis,
-          pmComments: item.pm_comments, 
-          opsComments: item.ops_comments, 
-          mdComments: item.md_comments,
-          paymentRef: item.payment_ref, 
-          grnDetails: item.grn_details, 
-          grnPhotos: item.grn_photos,
-          vendorBillPhoto: item.vendor_bill_photo,
-          costingComments: item.costing_comments
-        }));
-        setMaterialRequests(mapped);
+        setMaterialRequests(data.map(mapRequest));
       }
     };
     fetchRequests();
+
+    // REAL-TIME SUBSCRIPTION: Listen for changes from all users
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'material_requests' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newReq = mapRequest(payload.new);
+            setMaterialRequests(prev => [newReq, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedReq = mapRequest(payload.new);
+            setMaterialRequests(prev => prev.map(r => r.id === updatedReq.id ? updatedReq : r));
+          } else if (payload.eventType === 'DELETE') {
+            setMaterialRequests(prev => prev.filter(r => r.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [auth.isAuthenticated]);
 
   const handleUpdateStatus = async (id: string, newStatus: string, payload: any = {}) => {
+    // Local update for immediate UI response
     setMaterialRequests(prev => prev.map(r => r.id === id ? { ...r, status: newStatus as any, ...payload } : r));
+    
+    // Database update (Real-time listener will handle the sync for other clients)
     const snakePayload: any = { 
       status: newStatus,
       items: payload.items,
@@ -73,7 +108,13 @@ const App: React.FC = () => {
       grn_photos: payload.grnPhotos,
       vendor_bill_photo: payload.vendorBillPhoto
     };
-    await supabase.from('material_requests').update(snakePayload).eq('id', id);
+    
+    const { error } = await supabase
+      .from('material_requests')
+      .update(snakePayload)
+      .eq('id', id);
+
+    if (error) console.error("Update Error:", error);
   };
 
   const getHeaderTitle = () => {
@@ -113,8 +154,16 @@ const App: React.FC = () => {
                   onSaveDPR={() => {}} 
                   onUpdateIndentStatus={handleUpdateStatus} 
                   onSaveMaterialRequest={(data) => { 
-                    setMaterialRequests(p => [data, ...p]); 
-                    supabase.from('material_requests').insert({ id: data.id, project_name: data.projectName, items: data.items, urgency: data.urgency, status: data.status, requested_by: data.requestedBy }).then(); 
+                    supabase.from('material_requests').insert({ 
+                      id: data.id, 
+                      project_name: data.projectName, 
+                      items: data.items, 
+                      urgency: data.urgency, 
+                      status: data.status, 
+                      requested_by: data.requestedBy,
+                      timestamp: data.timestamp,
+                      date: data.date
+                    }).then(); 
                   }} 
                 />
               )}

@@ -49,11 +49,11 @@ export const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({ projec
       id: `req-${Date.now()}`,
       date: new Date().toISOString(),
       timestamp: Date.now(),
-      requestedBy: 'Site Engineer',
+      requestedBy: 'Vivek (Site Engineer)',
       projectName: projectName || 'Unknown Project',
       items: validItems,
       urgency,
-      status: 'Raised_By_SE', // Step 1: Vivek raises
+      status: 'PM_Review', // Step 2: Transition to Mathiazhagan immediately
       notes
     };
     onSave(newRequest);
@@ -81,7 +81,6 @@ export const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({ projec
         </div>
 
         <div className="space-y-6">
-          {/* Items List */}
           <div className="space-y-4">
             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Requested Inventory</label>
             {items.map((item, idx) => (
