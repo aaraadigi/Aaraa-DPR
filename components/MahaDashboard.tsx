@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Users, Package, Activity, ArrowRight, CheckCircle2, Clock, FileText, Building2 } from 'lucide-react';
@@ -13,6 +14,8 @@ interface MahaDashboardProps {
   recentDPRs: DPRRecord[];
   recentRequests: MaterialRequest[];
   defaultProjectName?: string; // New Prop
+  // Added username prop to fix TypeScript error in App.tsx where it's being passed
+  username?: string;
 }
 
 export const MahaDashboard: React.FC<MahaDashboardProps> = ({ 
@@ -20,7 +23,9 @@ export const MahaDashboard: React.FC<MahaDashboardProps> = ({
   onSaveMaterialRequest, 
   recentDPRs,
   recentRequests,
-  defaultProjectName
+  defaultProjectName,
+  // Destructure username from props
+  username
 }) => {
   const [view, setView] = useState<'dashboard' | 'dpr_form' | 'material_form' | 'all_reports'>('dashboard');
 
@@ -107,7 +112,8 @@ export const MahaDashboard: React.FC<MahaDashboardProps> = ({
              </div>
           )}
           <h2 className="text-3xl font-bold text-slate-800 tracking-tight">
-             {defaultProjectName ? 'Site Dashboard' : 'Good Morning, Maha.'}
+             {/* Greeting updated to use username prop if available */}
+             {defaultProjectName ? 'Site Dashboard' : `Good Morning, ${username || 'Maha'}.`}
           </h2>
           <p className="text-slate-500 mt-2">Here is the site overview for today.</p>
         </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, Download, Printer, ChevronDown, ChevronUp, FileText, Package, AlertCircle, Clock, ArrowLeft, Camera } from 'lucide-react';
 import { GlassCard } from './ui/GlassCard';
+import { IndentStatusTracker } from './IndentStatusTracker';
 import { DPRRecord, MaterialRequest } from '../types';
 
 interface DPRViewerProps {
@@ -28,7 +29,6 @@ export const DPRViewer: React.FC<DPRViewerProps> = ({ records, materialRequests,
   };
 
   const handleExportCSV = () => {
-    // CSV logic remains same
     const headers = "Date,Activity Count,Worker Count,Labour Details,Safety Notes\n";
     const rows = filteredRecords.map(r => {
       const workerCount = r.labour.reduce((a, b) => a + b.count, 0);
@@ -53,18 +53,18 @@ export const DPRViewer: React.FC<DPRViewerProps> = ({ records, materialRequests,
 
   const getStatusStyle = (status: string) => {
      switch (status) {
-       case 'Pending': return 'bg-yellow-100 text-yellow-700';
-       case 'Approved': return 'bg-blue-100 text-blue-700';
-       case 'Ordered': return 'bg-purple-100 text-purple-700';
-       case 'Fulfilled': return 'bg-green-100 text-green-700';
-       case 'Rejected': return 'bg-red-100 text-red-700';
-       default: return 'bg-slate-100 text-slate-700';
+       case 'Returned_To_SE': return 'bg-orange-100 text-orange-700';
+       case 'Approved_By_PM': return 'bg-green-100 text-green-700';
+       case 'PO_Raised': return 'bg-purple-100 text-purple-700';
+       case 'Goods_Received': return 'bg-blue-100 text-blue-700';
+       case 'Rejected_By_PM': return 'bg-red-100 text-red-700';
+       case 'Closed': return 'bg-slate-800 text-white';
+       default: return 'bg-blue-50 text-blue-600';
      }
   };
 
   return (
     <div className="max-w-6xl mx-auto px-4 pb-20">
-      {/* Header & Controls - Hidden on Print */}
       <div className="flex flex-col md:flex-row justify-between items-end mb-8 no-print">
         <div>
            <div className="flex items-center space-x-2">
@@ -97,7 +97,6 @@ export const DPRViewer: React.FC<DPRViewerProps> = ({ records, materialRequests,
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex space-x-1 p-1 bg-slate-200/50 rounded-xl mb-6 w-fit no-print">
         <button 
           onClick={() => setActiveTab('reports')}
@@ -134,7 +133,6 @@ export const DPRViewer: React.FC<DPRViewerProps> = ({ records, materialRequests,
 
             {filteredRecords.map((record) => (
               <GlassCard key={record.id} className="!p-0 overflow-hidden print:shadow-none print:border-b print:rounded-none">
-                {/* Summary Row */}
                 <div 
                   onClick={() => setExpandedId(expandedId === record.id ? null : record.id)}
                   className="p-6 cursor-pointer flex flex-col md:flex-row md:items-center justify-between hover:bg-white/40 transition-colors"
@@ -158,7 +156,6 @@ export const DPRViewer: React.FC<DPRViewerProps> = ({ records, materialRequests,
                   </div>
                 </div>
 
-                {/* Expanded Detail View - Always visible in Print */}
                 <AnimatePresence>
                   {(expandedId === record.id) && (
                     <motion.div 
@@ -168,7 +165,6 @@ export const DPRViewer: React.FC<DPRViewerProps> = ({ records, materialRequests,
                       className="bg-slate-50/50 border-t border-slate-100 print:block print:h-auto print:opacity-100"
                     >
                       <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* Left Column */}
                         <div className="space-y-6">
                           <div>
                             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Labour Breakdown</h4>
@@ -201,7 +197,6 @@ export const DPRViewer: React.FC<DPRViewerProps> = ({ records, materialRequests,
                             </div>
                           </div>
 
-                          {/* Photos Section */}
                           {record.photos && record.photos.length > 0 && (
                             <div>
                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center">
@@ -218,7 +213,6 @@ export const DPRViewer: React.FC<DPRViewerProps> = ({ records, materialRequests,
                           )}
                         </div>
 
-                        {/* Right Column */}
                         <div className="space-y-6">
                            <div>
                             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Activities</h4>
@@ -246,12 +240,10 @@ export const DPRViewer: React.FC<DPRViewerProps> = ({ records, materialRequests,
                                         </div>
                                       </div>
                                     </div>
-                                    
                                     <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                                       <motion.div 
                                         initial={{ width: 0 }}
                                         animate={{ width: `${displayPercentage}%` }}
-                                        transition={{ duration: 0.8, ease: "easeOut" }}
                                         className={`h-full rounded-full ${
                                           isOver ? 'bg-amber-500' : 
                                           isComplete ? 'bg-green-500' : 
@@ -278,15 +270,6 @@ export const DPRViewer: React.FC<DPRViewerProps> = ({ records, materialRequests,
                     </motion.div>
                   )}
                 </AnimatePresence>
-                <style>{`
-                  @media print {
-                    .print-visible-${record.id} {
-                      display: block !important;
-                      height: auto !important;
-                      opacity: 1 !important;
-                    }
-                  }
-                `}</style>
               </GlassCard>
             ))}
             
@@ -296,7 +279,6 @@ export const DPRViewer: React.FC<DPRViewerProps> = ({ records, materialRequests,
                   <FileText size={32} />
                 </div>
                 <h3 className="text-lg font-medium text-slate-600">No reports found</h3>
-                <p className="text-slate-400">Try adjusting the date filter.</p>
               </div>
             )}
           </motion.div>
@@ -306,69 +288,83 @@ export const DPRViewer: React.FC<DPRViewerProps> = ({ records, materialRequests,
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="space-y-4"
+            className="space-y-6"
           >
              {filteredRequests.map(req => (
-               <GlassCard key={req.id} className="flex flex-col md:flex-row justify-between items-start md:items-center">
-                 <div className="flex items-start space-x-4">
-                   <div className={`p-3 rounded-xl ${
-                     req.urgency === 'High' ? 'bg-red-100 text-red-600' :
-                     req.urgency === 'Medium' ? 'bg-amber-100 text-amber-600' :
-                     'bg-blue-100 text-blue-600'
-                   }`}>
-                     <Package size={24} />
-                   </div>
-                   <div>
-                     <div className="flex items-center space-x-2 mb-1">
-                       <h3 className="font-bold text-slate-800">Material Indent</h3>
-                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${getStatusStyle(req.status)}`}>
-                         {req.status}
-                       </span>
+               <GlassCard key={req.id}>
+                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                   <div className="flex items-start space-x-4">
+                     <div className={`p-3 rounded-xl ${
+                       req.urgency === 'High' ? 'bg-red-100 text-red-600' :
+                       'bg-blue-100 text-blue-600'
+                     }`}>
+                       <Package size={24} />
                      </div>
-                     <p className="text-xs text-slate-500 mb-3 flex items-center">
-                       <Clock size={12} className="mr-1" />
-                       {new Date(req.timestamp).toLocaleString()} • Requested by {req.requestedBy}
-                     </p>
-                     
-                     <div className="space-y-1">
-                       {req.items.map((item, idx) => (
-                         <div key={idx} className="text-sm text-slate-700 flex items-center">
-                           <span className="w-1 h-1 rounded-full bg-slate-400 mr-2"></span>
-                           <span className="font-medium mr-2">{item.material}</span>
-                           <span className="text-slate-500">{item.quantity} {item.unit}</span>
-                         </div>
-                       ))}
-                     </div>
-                     
-                     {req.notes && (
-                       <div className="mt-3 p-2 bg-slate-50 rounded text-xs text-slate-500 italic border border-slate-100 max-w-md">
-                         Note: {req.notes}
+                     <div>
+                       <div className="flex items-center space-x-2 mb-1">
+                         <h3 className="font-bold text-slate-800 text-lg">Indent #{req.id.slice(-4)}</h3>
+                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${getStatusStyle(req.status)}`}>
+                           {req.status.replace(/_/g, ' ')}
+                         </span>
                        </div>
-                     )}
+                       <p className="text-xs text-slate-500 flex items-center">
+                         <Clock size={12} className="mr-1" />
+                         {new Date(req.timestamp).toLocaleString()} • Requested by {req.requestedBy}
+                       </p>
+                     </div>
+                   </div>
+                   
+                   <div className="mt-4 md:mt-0">
+                      <div className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                          req.urgency === 'High' ? 'border-red-200 text-red-600 bg-red-50' :
+                          'border-green-200 text-green-600 bg-green-50'
+                      }`}>
+                        {req.urgency} Urgency
+                      </div>
                    </div>
                  </div>
+
+                 {/* 7-Step Tracker Integrated Here */}
+                 <div className="mb-8 bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+                    <IndentStatusTracker status={req.status} />
+                 </div>
                  
-                 <div className="mt-4 md:mt-0 flex flex-col items-end space-y-2">
-                   <div className={`px-3 py-1 rounded-full text-xs font-bold border ${
-                      req.urgency === 'High' ? 'border-red-200 text-red-600 bg-red-50' :
-                      req.urgency === 'Medium' ? 'border-amber-200 text-amber-600 bg-amber-50' :
-                      'border-green-200 text-green-600 bg-green-50'
-                   }`}>
-                     {req.urgency} Urgency
-                   </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-400 uppercase mb-3">Items Requested</h4>
+                      <div className="space-y-2">
+                        {req.items.map((item, idx) => (
+                          <div key={idx} className="text-sm text-slate-700 flex justify-between py-1 border-b border-slate-100 last:border-0">
+                            <span className="font-medium">{item.material}</span>
+                            <span className="text-slate-500 font-bold">{item.quantity} {item.unit}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {req.notes && (
+                        <div className="p-3 bg-white border border-slate-100 rounded-xl text-xs text-slate-500 shadow-sm">
+                          <span className="font-bold text-slate-400 uppercase text-[9px] block mb-1">SE Note:</span>
+                          {req.notes}
+                        </div>
+                      )}
+                      {req.procurementComments && (
+                        <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700 shadow-sm">
+                          <span className="font-bold text-blue-400 uppercase text-[9px] block mb-1">Procurement Review:</span>
+                          {req.procurementComments}
+                        </div>
+                      )}
+                      {req.pmComments && (
+                        <div className={`p-3 border rounded-xl text-xs shadow-sm ${req.status === 'Rejected_By_PM' ? 'bg-red-50 border-red-100 text-red-700' : 'bg-green-50 border-green-100 text-green-700'}`}>
+                          <span className="font-bold uppercase text-[9px] block mb-1">PM Final Decision:</span>
+                          {req.pmComments}
+                        </div>
+                      )}
+                    </div>
                  </div>
                </GlassCard>
              ))}
-
-             {filteredRequests.length === 0 && (
-              <div className="text-center py-20">
-                <div className="inline-flex p-4 rounded-full bg-slate-100 text-slate-400 mb-4">
-                  <Package size={32} />
-                </div>
-                <h3 className="text-lg font-medium text-slate-600">No material requests</h3>
-                <p className="text-slate-400">All caught up.</p>
-              </div>
-            )}
           </motion.div>
         )}
       </AnimatePresence>

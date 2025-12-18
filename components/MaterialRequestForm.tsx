@@ -52,7 +52,8 @@ export const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({ projec
       projectName: projectName || 'Unknown Project',
       items: validItems,
       urgency,
-      status: 'Pending_Procurement', // Step 1: SE -> Procurement
+      // Fix: Use a valid IndentStatus. 'PM_Review' corresponds to Step 2 where the indent is sent for initial verification.
+      status: 'PM_Review', 
       notes
     };
     onSave(newRequest);
@@ -68,7 +69,7 @@ export const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({ projec
             </div>
             <div>
               <h2 className="text-xl font-bold text-slate-800">New Material Indent</h2>
-              <p className="text-sm text-slate-500">Step 1: Raise request for Procurement Review.</p>
+              <p className="text-sm text-slate-500">Step 1: Raise request for PM Review.</p>
             </div>
           </div>
           {projectName && (
