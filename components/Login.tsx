@@ -21,7 +21,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     const cleanUser = username.trim().toLowerCase();
     const cleanPass = password.trim();
 
-    // NEW MAPPINGS PER INSTRUCTIONS
+    // Mapping Step-by-Step Roles to Employee IDs
     if (cleanUser === 'ai1024' && cleanPass === '123') {
       onLogin('se', 'Vivek');
     } else if (cleanUser === 'ai1002' && cleanPass === '123') {
@@ -43,7 +43,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     } else if (cleanUser === 'maha' && cleanPass === '123') {
       onLogin('maha', 'Maha');
     } else {
-      setError('Invalid User ID or Password');
+      setError('Invalid Employee ID or Password');
     }
   };
 
@@ -76,7 +76,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </div>
           </div>
 
-          {error && <p className="text-red-500 text-sm text-center bg-red-50 py-2 rounded-lg">{error}</p>}
+          {error && <p className="text-red-500 text-sm text-center bg-red-50 py-2 rounded-lg font-medium">{error}</p>}
 
           <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="submit" className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold shadow-lg hover:bg-slate-800 transition-colors flex items-center justify-center space-x-2">
             <span>Sign In</span>

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { Login } from './components/Login';
 import { DashboardHeader } from './components/DashboardHeader';
 import { MahaDashboard } from './components/MahaDashboard';
@@ -31,12 +31,25 @@ const App: React.FC = () => {
       const { data } = await supabase.from('material_requests').select('*').order('timestamp', { ascending: false });
       if (data) {
         const mapped: MaterialRequest[] = data.map((item: any) => ({
-          id: item.id, date: item.date, timestamp: item.timestamp, requestedBy: item.requested_by,
-          projectName: item.project_name, items: item.items, urgency: item.urgency,
-          status: item.status, notes: item.notes, quotes: item.quotes, marketAnalysis: item.market_analysis,
-          pmComments: item.pm_comments, opsComments: item.ops_comments, mdComments: item.md_comments,
-          paymentRef: item.payment_ref, grnDetails: item.grn_details, grnPhotos: item.grn_photos,
-          vendorBillPhoto: item.vendor_bill_photo
+          id: item.id, 
+          date: item.date, 
+          timestamp: item.timestamp, 
+          requestedBy: item.requested_by,
+          projectName: item.project_name, 
+          items: item.items, 
+          urgency: item.urgency,
+          status: item.status, 
+          notes: item.notes, 
+          quotes: item.quotes, 
+          marketAnalysis: item.market_analysis,
+          pmComments: item.pm_comments, 
+          opsComments: item.ops_comments, 
+          mdComments: item.md_comments,
+          paymentRef: item.payment_ref, 
+          grnDetails: item.grn_details, 
+          grnPhotos: item.grn_photos,
+          vendorBillPhoto: item.vendor_bill_photo,
+          costingComments: item.costing_comments
         }));
         setMaterialRequests(mapped);
       }
