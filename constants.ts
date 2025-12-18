@@ -1,3 +1,4 @@
+
 import { DPRRecord, Project, ProjectTask } from './types';
 
 export const LABOUR_CATEGORIES = [
@@ -84,61 +85,42 @@ export const MATERIAL_INDENT_SUGGESTIONS = [
 export const PROJECTS_DATA: Project[] = [
   { 
     id: 'p1', 
-    name: 'Mr. Deepak', 
-    location: 'Anna Nagar, Chennai', 
-    siteEngineer: 'Eng. Ravi',
-    projectManager: 'Mr. Saravanan',
-    progress: 0, 
+    name: 'WAAREE Road Project', 
+    location: 'Chennai Site A', 
+    siteEngineer: 'Vivek',
+    projectManager: 'Mathiazhagan',
+    progress: 15, 
     status: 'On Track' 
   },
   { 
     id: 'p2', 
-    name: 'Mr. Rama Krishnan', 
-    location: 'Adyar, Chennai', 
+    name: 'WABAG', 
+    location: 'Chennai Site B', 
     siteEngineer: 'Eng. Suresh', 
-    projectManager: 'Mr. Saravanan',
-    progress: 0, 
+    projectManager: 'Mathiazhagan',
+    progress: 45, 
     status: 'On Track' 
   },
   { 
     id: 'p3', 
-    name: 'Mr. Mahatma', 
-    location: 'Velachery, Chennai', 
+    name: 'SRM AP', 
+    location: 'Andhra Pradesh', 
     siteEngineer: 'Eng. Priya', 
-    projectManager: 'Mr. Saravanan',
-    progress: 0, 
+    projectManager: 'Mathiazhagan',
+    progress: 30, 
     status: 'On Track' 
   },
   { 
     id: 'p4', 
-    name: 'Mrs. Suchitra', 
+    name: 'VIBGYOR', 
     location: 'OMR, Chennai', 
     siteEngineer: 'Eng. Vikram', 
-    projectManager: 'Mr. Saravanan',
-    progress: 0, 
+    projectManager: 'Mathiazhagan',
+    progress: 60, 
     status: 'On Track' 
-  },
-  { 
-    id: 'p5', 
-    name: 'Mr. Karthikeyan', 
-    location: 'ECR, Chennai', 
-    siteEngineer: 'Eng. Anjali', 
-    projectManager: 'Mr. Saravanan',
-    progress: 0, 
-    status: 'On Track' 
-  },
-  {
-    id: 'p6',
-    name: 'Waaree Road Project',
-    location: 'Industrial Estate, Chennai',
-    siteEngineer: 'Vivek',
-    projectManager: 'Muthu',
-    progress: 0, 
-    status: 'On Track'
   }
 ];
 
-// Empty tasks list for a fresh start. PM must assign tasks.
 export const INITIAL_TASKS: ProjectTask[] = [];
 
 export const INITIAL_DPR_DATA: DPRRecord[] = [];

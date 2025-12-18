@@ -103,7 +103,21 @@ const App: React.FC = () => {
               {auth.role === 'ops' && <OpsDashboard materialRequests={materialRequests} onUpdateIndentStatus={handleUpdateStatus} />}
               {auth.role === 'md' && <MDDashboard materialRequests={materialRequests} onUpdateIndentStatus={handleUpdateStatus} />}
               {auth.role === 'finance' && <FinanceDashboard materialRequests={materialRequests} onUpdateStatus={handleUpdateStatus} />}
-              {auth.role === 'se' && <SEDashboard projects={projects} tasks={tasks} requests={materialRequests} onUpdateTask={() => {}} onUpdateProjectProgress={() => {}} onSaveDPR={() => {}} onUpdateIndentStatus={handleUpdateStatus} onSaveMaterialRequest={(data) => { setMaterialRequests(p => [data, ...p]); supabase.from('material_requests').insert({ id: data.id, project_name: data.projectName, items: data.items, urgency: data.urgency, status: data.status, requested_by: data.requestedBy }).then(); }} />}
+              {auth.role === 'se' && (
+                <SEDashboard 
+                  projects={projects.filter(p => p.siteEngineer === auth.user)} 
+                  tasks={tasks} 
+                  requests={materialRequests} 
+                  onUpdateTask={() => {}} 
+                  onUpdateProjectProgress={() => {}} 
+                  onSaveDPR={() => {}} 
+                  onUpdateIndentStatus={handleUpdateStatus} 
+                  onSaveMaterialRequest={(data) => { 
+                    setMaterialRequests(p => [data, ...p]); 
+                    supabase.from('material_requests').insert({ id: data.id, project_name: data.projectName, items: data.items, urgency: data.urgency, status: data.status, requested_by: data.requestedBy }).then(); 
+                  }} 
+                />
+              )}
               {auth.role === 'maha' && <MahaDashboard onSaveDPR={() => {}} onSaveMaterialRequest={() => {}} recentDPRs={dprRecords} recentRequests={materialRequests} username={auth.user || 'Admin'} />}
               {auth.role === 'dpr' && <DPRViewer records={dprRecords} materialRequests={materialRequests} />}
             </main>
