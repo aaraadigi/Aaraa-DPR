@@ -9,27 +9,26 @@ import { DPRViewer } from './DPRViewer';
 import { DPRRecord, MaterialRequest } from '../types';
 
 interface MahaDashboardProps {
+  userId: string;
+  username: string;
   onSaveDPR: (dpr: DPRRecord) => void;
   onSaveMaterialRequest: (req: MaterialRequest) => void;
   recentDPRs: DPRRecord[];
   recentRequests: MaterialRequest[];
-  defaultProjectName?: string; // New Prop
-  // Added username prop to fix TypeScript error in App.tsx where it's being passed
-  username?: string;
+  defaultProjectName?: string;
 }
 
 export const MahaDashboard: React.FC<MahaDashboardProps> = ({ 
+  userId,
+  username,
   onSaveDPR, 
   onSaveMaterialRequest, 
   recentDPRs,
   recentRequests,
-  defaultProjectName,
-  // Destructure username from props
-  username
+  defaultProjectName
 }) => {
   const [view, setView] = useState<'dashboard' | 'dpr_form' | 'material_form' | 'all_reports'>('dashboard');
 
-  // Filter recents if defaultProjectName is set
   const filteredDPRs = defaultProjectName 
     ? recentDPRs.filter(d => d.projectName === defaultProjectName)
     : recentDPRs;
@@ -38,31 +37,29 @@ export const MahaDashboard: React.FC<MahaDashboardProps> = ({
     ? recentRequests.filter(r => r.projectName === defaultProjectName)
     : recentRequests;
 
-  // Calculate stats based on filtered data
   const lastDPR = filteredDPRs[0];
   const totalWorkers = lastDPR ? lastDPR.labour.reduce((acc, curr) => acc + curr.count, 0) : 0;
   const activeActivities = lastDPR ? lastDPR.activities.length : 0;
 
-  // Combine and sort recent activity
   const recentActivity = [
     ...filteredDPRs.map(d => ({ ...d, type: 'dpr' as const })),
     ...filteredRequests.map(r => ({ ...r, type: 'request' as const }))
-  ].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5); // Show top 5
+  ].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
 
   if (view === 'dpr_form') {
     return (
       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
         <button 
           onClick={() => setView('dashboard')}
-          className="mb-4 px-4 py-2 text-sm font-medium text-slate-500 hover:text-aaraa-blue transition-colors flex items-center"
+          className="mb-4 px-4 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-aaraa-blue transition-colors flex items-center"
         >
           ← Back to Dashboard
         </button>
         <DPREntryForm 
           defaultProjectName={defaultProjectName}
+          submittedBy={userId}
           onSave={(data) => {
             onSaveDPR(data);
-            setView('dashboard');
           }} 
         />
       </motion.div>
@@ -74,12 +71,13 @@ export const MahaDashboard: React.FC<MahaDashboardProps> = ({
       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
         <button 
           onClick={() => setView('dashboard')}
-          className="mb-4 px-4 py-2 text-sm font-medium text-slate-500 hover:text-aaraa-blue transition-colors flex items-center"
+          className="mb-4 px-4 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-aaraa-blue transition-colors flex items-center"
         >
           ← Back to Dashboard
         </button>
         <MaterialRequestForm
           projectName={defaultProjectName}
+          userName={username}
           onSave={(data) => {
             onSaveMaterialRequest(data);
             setView('dashboard');
@@ -107,22 +105,21 @@ export const MahaDashboard: React.FC<MahaDashboardProps> = ({
       <div className="flex flex-col md:flex-row justify-between items-end gap-4">
         <div>
           {defaultProjectName && (
-             <div className="inline-flex items-center bg-blue-100 text-aaraa-blue px-3 py-1 rounded-full text-xs font-bold mb-2">
+             <div className="inline-flex items-center bg-blue-100 dark:bg-blue-900/30 text-aaraa-blue px-3 py-1 rounded-full text-xs font-bold mb-2 transition-colors">
                <Building2 size={12} className="mr-1" /> {defaultProjectName}
              </div>
           )}
-          <h2 className="text-3xl font-bold text-slate-800 tracking-tight">
-             {/* Greeting updated to use username prop if available */}
-             {defaultProjectName ? 'Site Dashboard' : `Good Morning, ${username || 'Maha'}.`}
+          <h2 className="text-3xl font-bold text-slate-800 dark:text-white tracking-tight">
+             {defaultProjectName ? 'Site Dashboard' : `Good Morning, ${username.split(' ')[0]}.`}
           </h2>
-          <p className="text-slate-500 mt-2">Here is the site overview for today.</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-2">Current site statistics and reporting controls.</p>
         </div>
         <div className="flex space-x-3">
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setView('all_reports')}
-            className="bg-white text-slate-700 border border-slate-200 px-5 py-3 rounded-full font-semibold shadow-sm flex items-center space-x-2 hover:bg-slate-50"
+            className="bg-white dark:bg-[#2c2c2e] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/5 px-5 py-3 rounded-full font-semibold shadow-sm flex items-center space-x-2 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
           >
             <FileText size={20} />
             <span>View All Reports</span>
@@ -143,33 +140,33 @@ export const MahaDashboard: React.FC<MahaDashboardProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <GlassCard delay={0.1} className="flex flex-col justify-between h-40">
           <div className="flex items-start justify-between">
-            <div className="p-3 bg-blue-50 rounded-2xl text-blue-600">
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl text-blue-600 dark:text-blue-400 transition-colors">
               <Users size={24} />
             </div>
-            <span className="text-xs font-semibold text-green-500 bg-green-50 px-2 py-1 rounded-full">Active</span>
+            <span className="text-xs font-semibold text-green-500 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full">Active</span>
           </div>
           <div>
-            <h3 className="text-3xl font-bold text-slate-800">{totalWorkers}</h3>
-            <p className="text-sm text-slate-500">Workers on site (Last Report)</p>
+            <h3 className="text-3xl font-bold text-slate-800 dark:text-white">{totalWorkers}</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Workers on site (Last Report)</p>
           </div>
         </GlassCard>
 
         <GlassCard delay={0.2} className="flex flex-col justify-between h-40">
            <div className="flex items-start justify-between">
-            <div className="p-3 bg-indigo-50 rounded-2xl text-indigo-600">
+            <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl text-indigo-600 dark:text-indigo-400 transition-colors">
               <Activity size={24} />
             </div>
           </div>
           <div>
-            <h3 className="text-3xl font-bold text-slate-800">{activeActivities}</h3>
-            <p className="text-sm text-slate-500">Ongoing Activities</p>
+            <h3 className="text-3xl font-bold text-slate-800 dark:text-white">{activeActivities}</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Ongoing Activities</p>
           </div>
         </GlassCard>
 
         <GlassCard 
           delay={0.3} 
           onClick={() => setView('material_form')}
-          className="flex flex-col justify-between h-40 bg-gradient-to-br from-slate-800 to-slate-900 !text-white !border-white/10 cursor-pointer group hover:scale-[1.02] transition-transform"
+          className="flex flex-col justify-between h-40 bg-gradient-to-br from-slate-800 to-slate-900 dark:from-indigo-600 dark:to-indigo-800 !text-white !border-white/10 cursor-pointer group hover:scale-[1.02] transition-transform"
         >
            <div className="flex items-start justify-between">
             <div className="p-3 bg-white/10 rounded-2xl text-white group-hover:bg-white/20 transition-colors">
@@ -187,42 +184,42 @@ export const MahaDashboard: React.FC<MahaDashboardProps> = ({
       </div>
 
       <div className="mt-8">
-        <h3 className="text-xl font-bold text-slate-800 mb-4">Recent Activity</h3>
+        <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-4">Recent Activity</h3>
         <div className="space-y-4">
           {recentActivity.length === 0 ? (
-            <div className="text-center py-10 text-slate-400">No reports submitted yet.</div>
+            <div className="text-center py-10 text-slate-400 dark:text-slate-500">No reports submitted yet.</div>
           ) : (
             recentActivity.map((item, idx) => (
               <GlassCard key={item.id} delay={0.1 * idx} className="!p-4 flex items-center justify-between group">
                 <div className="flex items-center space-x-4">
                   {item.type === 'dpr' ? (
-                    <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                    <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 transition-colors">
                       <CheckCircle2 size={20} />
                     </div>
                   ) : (
-                    <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                    <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 transition-colors">
                       <Package size={20} />
                     </div>
                   )}
                   
                   <div>
-                    <h4 className="font-semibold text-slate-800">
+                    <h4 className="font-semibold text-slate-800 dark:text-white">
                       {item.type === 'dpr' ? 'Site Report' : 'Material Indent'}
-                      <span className="font-normal text-slate-500"> - {new Date(item.date).toLocaleDateString()}</span>
+                      <span className="font-normal text-slate-500 dark:text-slate-400"> - {new Date(item.date).toLocaleDateString()}</span>
                     </h4>
                     {item.type === 'dpr' ? (
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         {item.labour.reduce((a, b) => a + b.count, 0)} Workers • {item.activities.length} Activities
                       </p>
                     ) : (
-                      <p className="text-xs text-slate-500">
-                        {item.items.length} Items • <span className={item.urgency === 'High' ? 'text-red-500 font-medium' : ''}>{item.urgency} Urgency</span>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {item.items.length} Items • <span className={item.urgency === 'High' ? 'text-red-500 dark:text-red-400 font-medium' : ''}>{item.urgency} Urgency</span>
                       </p>
                     )}
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-xs font-mono text-slate-400 flex items-center justify-end gap-1">
+                  <span className="text-xs font-mono text-slate-400 dark:text-slate-500 flex items-center justify-end gap-1">
                     <Clock size={12} />
                     {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>

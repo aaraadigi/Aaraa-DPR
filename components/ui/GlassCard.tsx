@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { motion } from 'framer-motion';
 
@@ -18,8 +19,10 @@ export const GlassCard: React.FC<GlassCardProps> = ({ children, className = '', 
       className={`
         glass-panel
         bg-white/70 
+        dark:bg-[#2c2c2e]/70
         backdrop-blur-xl 
         border border-white/40 
+        dark:border-white/10
         shadow-glass 
         rounded-2xl 
         p-6 

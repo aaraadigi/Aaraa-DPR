@@ -117,7 +117,7 @@ export const PROJECTS_DATA: Project[] = [
     id: 'p1', 
     name: 'WAAREE', 
     location: 'Chennai Site A', 
-    siteEngineer: 'Vivek',
+    siteEngineer: 'Bakayaraj', // ai1033
     projectManager: 'Mathiazhagan',
     progress: 15, 
     status: 'On Track' 
@@ -126,7 +126,7 @@ export const PROJECTS_DATA: Project[] = [
     id: 'p2', 
     name: 'WABAG', 
     location: 'Chennai Site B', 
-    siteEngineer: 'Eng. Suresh', 
+    siteEngineer: 'Sakthi Vignesh', // ai1028
     projectManager: 'Mathiazhagan',
     progress: 45, 
     status: 'On Track' 
@@ -135,7 +135,7 @@ export const PROJECTS_DATA: Project[] = [
     id: 'p3', 
     name: 'SRM AP', 
     location: 'Andhra Pradesh', 
-    siteEngineer: 'Eng. Priya', 
+    siteEngineer: 'Elevarasan', // ai1006
     projectManager: 'Mathiazhagan',
     progress: 30, 
     status: 'On Track' 
@@ -144,7 +144,7 @@ export const PROJECTS_DATA: Project[] = [
     id: 'p4', 
     name: 'VIBGYOR', 
     location: 'OMR, Chennai', 
-    siteEngineer: 'Eng. Vikram', 
+    siteEngineer: 'Vivek', 
     projectManager: 'Mathiazhagan',
     progress: 60, 
     status: 'On Track' 

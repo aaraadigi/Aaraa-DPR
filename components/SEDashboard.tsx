@@ -16,6 +16,7 @@ import { SitePhotoUpload } from './SitePhotoUpload';
 
 interface SEDashboardProps {
   userName?: string;
+  userId: string;
   projects: Project[];
   tasks: ProjectTask[];
   requests?: MaterialRequest[]; 
@@ -31,6 +32,7 @@ type TabType = 'overview' | 'tasks' | 'indents' | 'dpr' | 'photos';
 
 export const SEDashboard: React.FC<SEDashboardProps> = ({ 
   userName,
+  userId,
   projects, tasks, requests = [], dprRecords = [], onUpdateTask, onUpdateProjectProgress, onSaveMaterialRequest, onUpdateIndentStatus, onSaveDPR
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -40,8 +42,6 @@ export const SEDashboard: React.FC<SEDashboardProps> = ({
   const [grnNote, setGrnNote] = useState('');
   const [billPhoto, setBillPhoto] = useState<string | null>(null);
   const [grnPhoto, setGrnPhoto] = useState<string | null>(null);
-
-  // CRITICAL: Removed the useEffect auto-selector to ensure user always sees the project list first.
 
   const currentProject = projects.find(p => p.id === selectedProjectId);
   
@@ -84,7 +84,6 @@ export const SEDashboard: React.FC<SEDashboardProps> = ({
     }
   };
 
-  // 1. Initial Project Selection Screen (The "Launchpad")
   if (!selectedProjectId) {
     return (
       <motion.div 
@@ -160,10 +159,8 @@ export const SEDashboard: React.FC<SEDashboardProps> = ({
     );
   }
 
-  // 2. The Site Dashboard (Only visible after selection)
   return (
     <div className="max-w-6xl mx-auto px-4 pb-20">
-      {/* Dynamic Header with Navigation */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6 border-b border-slate-100 pb-8">
         <div className="flex items-center space-x-5">
           <button 
@@ -211,7 +208,6 @@ export const SEDashboard: React.FC<SEDashboardProps> = ({
             animate={{ opacity: 1, y: 0 }} 
             className="space-y-8"
           >
-            {/* High Level Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <GlassCard className="flex flex-col justify-between h-44 bg-gradient-to-br from-white to-blue-50/30">
                 <div className="flex justify-between items-start">
@@ -257,7 +253,6 @@ export const SEDashboard: React.FC<SEDashboardProps> = ({
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              {/* Recent Activity Feed */}
               <div className="lg:col-span-8 space-y-6">
                 <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                   <Activity size={20} className="text-blue-500" /> Recent Site Updates
@@ -279,52 +274,7 @@ export const SEDashboard: React.FC<SEDashboardProps> = ({
                       <ChevronRight size={18} className="text-slate-300 group-hover:text-slate-500 transition-colors" />
                     </GlassCard>
                   ))}
-                  {projectRequests.slice(0, 2).map((req, idx) => (
-                    <GlassCard key={idx} className="!p-5 flex items-center justify-between group hover:border-slate-300">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                          <Package size={20} />
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-800 text-sm">Material Indent Raised</p>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                            {new Date(req.timestamp).toLocaleDateString()} • Status: {req.status.replace(/_/g, ' ')}
-                          </p>
-                        </div>
-                      </div>
-                      <ChevronRight size={18} className="text-slate-300 group-hover:text-slate-500 transition-colors" />
-                    </GlassCard>
-                  ))}
                 </div>
-              </div>
-
-              {/* Quick Actions / Safety Checklist */}
-              <div className="lg:col-span-4 space-y-6">
-                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                   <ShieldAlert size={20} className="text-amber-500" /> Safety Status
-                </h3>
-                <GlassCard className="!p-6 border-amber-100 bg-amber-50/30">
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-5 h-5 rounded bg-green-500 flex-shrink-0 mt-0.5 flex items-center justify-center text-white">
-                        <CheckCircle2 size={12} />
-                      </div>
-                      <p className="text-xs font-bold text-slate-700">Safety equipment verified for all labor categories</p>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-5 h-5 rounded bg-amber-500 flex-shrink-0 mt-0.5 flex items-center justify-center text-white">
-                        <Clock size={12} />
-                      </div>
-                      <p className="text-xs font-bold text-slate-700">Evening tool-box talk scheduled for 4:30 PM</p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => setActiveTab('dpr')}
-                    className="w-full mt-6 bg-white border border-amber-200 text-amber-700 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-amber-100 transition-colors"
-                  >
-                    Update Safety Notes
-                  </button>
-                </GlassCard>
               </div>
             </div>
           </motion.div>
@@ -335,85 +285,29 @@ export const SEDashboard: React.FC<SEDashboardProps> = ({
                 <Plus size={18} className="mr-2" /> Raise New Indent
               </button>
             </div>
-            {projectRequests.length === 0 ? (
-              <div className="text-center py-24 bg-white rounded-3xl border border-dashed border-slate-200 shadow-sm">
-                <Package size={48} className="mx-auto text-slate-100 mb-4" />
-                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No active indents found</p>
-              </div>
-            ) : (
-              projectRequests.map(req => (
-                <GlassCard key={req.id} className="!p-0 overflow-hidden border-l-4 border-l-blue-500">
-                  <div className="p-6">
-                    <div className="flex justify-between items-start mb-6">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-black text-slate-900 text-xl tracking-tight">Indent #{req.id.slice(-4)}</h4>
-                          {req.urgency === 'High' && (
-                            <span className="bg-red-50 text-red-600 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest border border-red-100">Urgent</span>
-                          )}
-                        </div>
-                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
-                          {new Date(req.timestamp).toLocaleDateString()} • {new Date(req.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                      <span className={`text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest border ${
-                        req.status === 'Completed' ? 'bg-green-50 text-green-700 border-green-100' : 
-                        'bg-blue-50 text-blue-700 border-blue-100'
-                      }`}>
-                        {req.status.replace(/_/g, ' ')}
-                      </span>
-                    </div>
-                    
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 shadow-inner">
-                       <IndentStatusTracker status={req.status} />
-                    </div>
-
-                    <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-                       <div className="space-y-3">
-                          <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Items Requested</h5>
-                          <div className="bg-white rounded-2xl border border-slate-100 p-4 space-y-2 shadow-sm">
-                            {req.items.map((it, i) => (
-                              <div key={i} className="flex justify-between border-b border-slate-50 py-2 last:border-0 last:pb-0">
-                                <span className="text-slate-700 font-bold text-sm">{it.material}</span>
-                                <span className="font-black text-slate-900 text-sm">{it.quantity} {it.unit}</span>
-                              </div>
-                            ))}
-                          </div>
-                       </div>
-                       
-                       {req.status === 'GRN_Pending' && (
-                         <div className="bg-indigo-50/50 p-6 rounded-2xl border border-indigo-100">
-                            <h5 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                               <Package size={16} /> Ready for Material Receipt
-                            </h5>
-                            <button 
-                              onClick={() => { /* logic to expand GRN section */ }}
-                              className="w-full bg-indigo-600 text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20"
-                            >
-                              Open GRN Panel
-                            </button>
-                         </div>
-                       )}
-                    </div>
+            {projectRequests.map(req => (
+              <GlassCard key={req.id} className="!p-0 overflow-hidden border-l-4 border-l-blue-500">
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-6">
+                    <h4 className="font-black text-slate-900 text-xl tracking-tight">Indent #{req.id.slice(-4)}</h4>
+                    <span className="text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest border bg-blue-50 text-blue-700 border-blue-100">
+                      {req.status.replace(/_/g, ' ')}
+                    </span>
                   </div>
-                </GlassCard>
-              ))
-            )}
+                  <IndentStatusTracker status={req.status} />
+                </div>
+              </GlassCard>
+            ))}
           </motion.div>
         ) : activeTab === 'dpr' ? (
           <motion.div key="dpr" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <DPREntryForm defaultProjectName={currentProject?.name} onSave={onSaveDPR} />
+            <DPREntryForm defaultProjectName={currentProject?.name} submittedBy={userId} onSave={onSaveDPR} />
           </motion.div>
         ) : activeTab === 'photos' ? (
           <motion.div key="photos" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <SitePhotoUpload projectId={currentProject?.id || ''} projectCode={currentProject?.id || ''} userId={userName || ''} />
           </motion.div>
-        ) : (
-          <motion.div key="tasks" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 bg-white rounded-3xl border border-slate-200 border-dashed">
-            <Clock size={40} className="mx-auto text-slate-200 mb-4" />
-            <p className="text-slate-400 font-medium tracking-tight">Task list for {currentProject?.name} is currently empty.</p>
-          </motion.div>
-        )}
+        ) : null}
       </AnimatePresence>
       
       {showIndentForm && (

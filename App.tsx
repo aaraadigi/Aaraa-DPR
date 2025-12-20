@@ -19,7 +19,7 @@ import { Footer } from './components/Footer';
 import { AuthState, DPRRecord, MaterialRequest, UserRole, Project, ProjectTask, Notification } from './types';
 import { PROJECTS_DATA, INITIAL_TASKS } from './constants';
 import { supabase } from './lib/supabaseClient';
-import { Menu } from 'lucide-react';
+import { Menu, Sun, Moon } from 'lucide-react';
 
 const App: React.FC = () => {
   const [auth, setAuth] = useState<AuthState>({ isAuthenticated: false, role: null, user: null, userId: '' });
@@ -29,6 +29,20 @@ const App: React.FC = () => {
   const [dprRecords, setDprRecords] = useState<DPRRecord[]>([]);
   const [projects] = useState<Project[]>(PROJECTS_DATA);
   const [tasks] = useState<ProjectTask[]>(INITIAL_TASKS);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.getItem('theme') === 'dark' || 
+      (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  });
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDarkMode]);
 
   const mapRequest = useCallback((item: any): MaterialRequest => ({
     id: item.id, 
@@ -54,16 +68,34 @@ const App: React.FC = () => {
     costingComments: item.costing_comments
   }), []);
 
+  const mapDPR = useCallback((item: any): DPRRecord => ({
+    id: item.id,
+    date: item.date,
+    timestamp: Number(item.timestamp),
+    submittedBy: item.submitted_by,
+    projectName: item.project_name,
+    labour: item.labour || [],
+    materials: item.materials || [],
+    activities: item.activities || [],
+    machinery: item.machinery,
+    safetyObservations: item.safety_observations,
+    risksAndDelays: item.risks_and_delays,
+    photos: item.photos || []
+  }), []);
+
   useEffect(() => {
     if (!auth.isAuthenticated) return;
 
     const fetchData = async () => {
       const { data: requests } = await supabase.from('material_requests').select('*').order('timestamp', { ascending: false });
       if (requests) setMaterialRequests(requests.map(mapRequest));
+
+      const { data: dprs } = await supabase.from('dpr_records').select('*').order('timestamp', { ascending: false });
+      if (dprs) setDprRecords(dprs.map(mapDPR));
     };
     fetchData();
 
-    const channel = supabase.channel('requests-flow')
+    const requestsChannel = supabase.channel('requests-flow')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'material_requests' }, (payload) => {
         if (payload.eventType === 'INSERT') {
           const newReq = mapRequest(payload.new);
@@ -74,11 +106,67 @@ const App: React.FC = () => {
         }
       }).subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [auth.isAuthenticated, mapRequest]);
+    const dprChannel = supabase.channel('dpr-flow')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dpr_records' }, (payload) => {
+        const newDpr = mapDPR(payload.new);
+        setDprRecords(prev => [newDpr, ...prev.filter(d => d.id !== newDpr.id)]);
+      }).subscribe();
+
+    return () => { 
+      supabase.removeChannel(requestsChannel);
+      supabase.removeChannel(dprChannel);
+    };
+  }, [auth.isAuthenticated, mapRequest, mapDPR]);
+
+  const handleSaveDPR = async (dpr: DPRRecord) => {
+    const { error } = await supabase.from('dpr_records').insert({
+      id: dpr.id,
+      timestamp: dpr.timestamp,
+      date: dpr.date,
+      submitted_by: dpr.submittedBy,
+      project_name: dpr.projectName,
+      labour: dpr.labour,
+      materials: dpr.materials,
+      activities: dpr.activities,
+      machinery: dpr.machinery,
+      safety_observations: dpr.safetyObservations,
+      risks_and_delays: dpr.risksAndDelays,
+      photos: dpr.photos
+    });
+
+    if (error) {
+      console.error('Database Error:', error);
+      throw error;
+    } else {
+      setDprRecords(prev => [dpr, ...prev]);
+    }
+  };
+
+  const handleSaveMaterialRequest = async (req: MaterialRequest) => {
+    const { error } = await supabase.from('material_requests').insert({
+      id: req.id,
+      timestamp: req.timestamp,
+      date: req.date,
+      requested_by: req.requestedBy,
+      project_name: req.projectName,
+      items: req.items,
+      urgency: req.urgency,
+      status: req.status,
+      notes: req.notes,
+      deadline: req.deadline,
+      indent_sheet_photo: req.indentSheetPhoto
+    });
+    
+    if (error) {
+      console.error('Error saving request:', error);
+      alert('Failed to submit request.');
+    } else {
+      setMaterialRequests(prev => [req, ...prev]);
+      alert('Material request submitted to PM for review.');
+    }
+  };
 
   const handleUpdateStatus = async (id: string, newStatus: string, payload: any = {}) => {
-    setMaterialRequests(prev => prev.map(r => r.id === id ? { ...r, status: newStatus as any, ...payload } : r));
     const dbPayload: any = { 
       status: newStatus,
       items: payload.items,
@@ -94,7 +182,11 @@ const App: React.FC = () => {
       vendor_bill_photo: payload.vendorBillPhoto
     };
     Object.keys(dbPayload).forEach(key => dbPayload[key] === undefined && delete dbPayload[key]);
-    await supabase.from('material_requests').update(dbPayload).eq('id', id);
+    
+    const { error } = await supabase.from('material_requests').update(dbPayload).eq('id', id);
+    if (!error) {
+      setMaterialRequests(prev => prev.map(r => r.id === id ? { ...r, status: newStatus as any, ...payload } : r));
+    }
   };
 
   const getHeaderTitle = () => {
@@ -133,24 +225,34 @@ const App: React.FC = () => {
       case 'se': return (
         <SEDashboard 
           userName={auth.user || 'Site Engineer'}
+          userId={auth.userId}
           projects={projects.filter(p => p.siteEngineer === auth.user)} 
           tasks={tasks} 
           requests={materialRequests} 
           dprRecords={dprRecords}
           onUpdateTask={() => {}} 
           onUpdateProjectProgress={() => {}} 
-          onSaveDPR={() => {}} 
+          onSaveDPR={handleSaveDPR} 
           onUpdateIndentStatus={handleUpdateStatus} 
-          onSaveMaterialRequest={() => {}} 
+          onSaveMaterialRequest={handleSaveMaterialRequest} 
         />
       );
-      case 'maha': return <MahaDashboard onSaveDPR={() => {}} onSaveMaterialRequest={() => {}} recentDPRs={dprRecords} recentRequests={materialRequests} username={auth.user || 'Admin'} />;
+      case 'maha': return (
+        <MahaDashboard 
+          userId={auth.userId}
+          username={auth.user || 'Admin'}
+          onSaveDPR={handleSaveDPR} 
+          onSaveMaterialRequest={handleSaveMaterialRequest} 
+          recentDPRs={dprRecords} 
+          recentRequests={materialRequests} 
+        />
+      );
       default: return null;
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col font-inter text-slate-800 bg-slate-50">
+    <div className="min-h-screen flex flex-col font-inter text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-[#1c1c1e] transition-colors duration-300">
       <AnimatePresence mode="wait">
         {!auth.isAuthenticated ? (
           <Login onLogin={(role, user, userId) => setAuth({ isAuthenticated: true, role, user, userId })} />
@@ -167,22 +269,32 @@ const App: React.FC = () => {
               onLogout={() => setAuth({ isAuthenticated: false, role: null, user: null, userId: '' })}
             />
             
-            <header className="sticky top-0 z-50 px-6 py-4 bg-white/80 backdrop-blur-xl border-b border-white/20 shadow-sm flex items-center justify-between no-print">
+            <header className="sticky top-0 z-50 px-6 py-4 bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl border-b border-white/20 dark:border-white/5 shadow-sm flex items-center justify-between no-print transition-colors duration-300">
               <div className="flex items-center space-x-4">
-                <button onClick={() => setIsSideMenuOpen(true)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
-                  <Menu size={24} className="text-slate-900" />
+                <button onClick={() => setIsSideMenuOpen(true)} className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors">
+                  <Menu size={24} className="text-slate-900 dark:text-white" />
                 </button>
                 <div className="hidden md:block">
-                  <h1 className="text-lg font-bold text-slate-800 tracking-tight">AARAA Enterprise</h1>
+                  <h1 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight">AARAA Enterprise</h1>
                 </div>
               </div>
-              <h2 className="text-xl font-bold text-slate-800 hidden lg:block">{getHeaderTitle()}</h2>
-              <div className="flex items-center space-x-3">
+              <h2 className="text-xl font-bold text-slate-800 dark:text-white hidden lg:block">{getHeaderTitle()}</h2>
+              
+              <div className="flex items-center space-x-3 md:space-x-5">
+                 {/* Theme Toggle */}
+                 <button 
+                  onClick={() => setIsDarkMode(!isDarkMode)}
+                  className="p-2.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/20 transition-all"
+                  aria-label="Toggle Theme"
+                 >
+                   {isDarkMode ? <Sun size={20} className="text-amber-400" /> : <Moon size={20} className="text-slate-600" />}
+                 </button>
+
                  <div className="text-right hidden sm:block">
-                    <p className="text-xs font-bold text-slate-900">{auth.user}</p>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">{auth.user}</p>
                     <p className="text-[10px] text-slate-400 font-bold uppercase">{auth.userId}</p>
                  </div>
-                 <div className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
+                 <div className="w-10 h-10 rounded-full bg-slate-900 dark:bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-lg">
                     {auth.user?.substring(0, 2).toUpperCase()}
                  </div>
               </div>
