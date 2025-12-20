@@ -14,6 +14,7 @@ import { SEDashboard } from './components/SEDashboard';
 import { OpsDashboard } from './components/OpsDashboard';
 import { MDDashboard } from './components/MDDashboard';
 import { PettyCash } from './components/PettyCash';
+import { DailyTaskBoard } from './components/DailyTaskBoard';
 import { Footer } from './components/Footer';
 import { AuthState, DPRRecord, MaterialRequest, UserRole, Project, ProjectTask, Notification } from './types';
 import { PROJECTS_DATA, INITIAL_TASKS } from './constants';
@@ -22,7 +23,7 @@ import { Menu } from 'lucide-react';
 
 const App: React.FC = () => {
   const [auth, setAuth] = useState<AuthState>({ isAuthenticated: false, role: null, user: null, userId: '' });
-  const [activeView, setActiveView] = useState<'dashboard' | 'petty_cash' | 'dpr_viewer'>('dashboard');
+  const [activeView, setActiveView] = useState<'dashboard' | 'petty_cash' | 'dpr_viewer' | 'daily_tasks'>('dashboard');
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [materialRequests, setMaterialRequests] = useState<MaterialRequest[]>([]);
   const [dprRecords, setDprRecords] = useState<DPRRecord[]>([]);
@@ -99,6 +100,7 @@ const App: React.FC = () => {
   const getHeaderTitle = () => {
     if (activeView === 'petty_cash') return 'Petty Cash Ledger';
     if (activeView === 'dpr_viewer') return 'Reports Archive';
+    if (activeView === 'daily_tasks') return 'Personal Task Journal';
     switch(auth.role) {
       case 'pm': return 'PM Dashboard';
       case 'ops': return 'Operations Head';
@@ -117,6 +119,9 @@ const App: React.FC = () => {
     if (activeView === 'dpr_viewer') {
       return <DPRViewer records={dprRecords} materialRequests={materialRequests} />;
     }
+    if (activeView === 'daily_tasks') {
+      return <DailyTaskBoard userId={auth.userId} />;
+    }
 
     switch(auth.role) {
       case 'pm': return <PMDashboard projects={projects} tasks={tasks} notifications={[]} requests={materialRequests} onAssignTask={() => {}} onClearNotification={() => {}} onUpdateIndentStatus={handleUpdateStatus} />;
@@ -131,6 +136,7 @@ const App: React.FC = () => {
           projects={projects.filter(p => p.siteEngineer === auth.user)} 
           tasks={tasks} 
           requests={materialRequests} 
+          dprRecords={dprRecords}
           onUpdateTask={() => {}} 
           onUpdateProjectProgress={() => {}} 
           onSaveDPR={() => {}} 
@@ -155,6 +161,7 @@ const App: React.FC = () => {
               onClose={() => setIsSideMenuOpen(false)} 
               role={auth.role}
               userName={auth.user || ''}
+              userId={auth.userId}
               activeView={activeView}
               onNavigate={setActiveView}
               onLogout={() => setAuth({ isAuthenticated: false, role: null, user: null, userId: '' })}

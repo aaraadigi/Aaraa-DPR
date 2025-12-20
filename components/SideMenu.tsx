@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, LayoutDashboard, Wallet, ClipboardList, LogOut, User, Settings, CreditCard } from 'lucide-react';
+import { X, LayoutDashboard, Wallet, ClipboardList, LogOut, User, ListTodo } from 'lucide-react';
 import { UserRole } from '../types';
 
 interface SideMenuProps {
@@ -9,29 +9,49 @@ interface SideMenuProps {
   onClose: () => void;
   role: UserRole;
   userName: string;
+  userId: string;
   activeView: string;
   onNavigate: (view: any) => void;
   onLogout: () => void;
 }
 
 export const SideMenu: React.FC<SideMenuProps> = ({ 
-  isOpen, onClose, role, userName, activeView, onNavigate, onLogout 
+  isOpen, onClose, role, userName, userId, activeView, onNavigate, onLogout 
 }) => {
   const menuItems = [
+    // Primary item for AI1009
+    { 
+      id: 'daily_tasks', 
+      label: 'Daily Task', 
+      icon: ListTodo, 
+      roles: ['maha', 'md'], 
+      specificUserId: 'ai1009', 
+      primary: true 
+    },
     { id: 'petty_cash', label: 'Petty Cash', icon: Wallet, roles: ['all'], primary: true },
     { id: 'dashboard', label: 'Management Dash', icon: LayoutDashboard, roles: ['all'] },
     { id: 'dpr_viewer', label: 'Reports Archive', icon: ClipboardList, roles: ['md', 'ops', 'pm', 'finance', 'dpr', 'maha'] },
   ];
 
-  const filteredItems = menuItems.filter(item => 
-    item.roles.includes('all') || item.roles.includes(role || '')
-  );
+  const filteredItems = menuItems.filter(item => {
+    const currentRole = (role || '').toLowerCase();
+    const currentUserId = (userId || '').toLowerCase();
+    const targetUserId = (item.specificUserId || '').toLowerCase();
+
+    // 1. If item is restricted to a specific User ID, check that first
+    if (item.specificUserId) {
+      return currentUserId === targetUserId;
+    }
+
+    // 2. Otherwise check roles
+    const roleMatch = item.roles.includes('all') || item.roles.includes(currentRole);
+    return roleMatch;
+  });
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -40,7 +60,6 @@ export const SideMenu: React.FC<SideMenuProps> = ({
             className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[60]"
           />
 
-          {/* Sidebar */}
           <motion.div
             initial={{ x: '-100%' }}
             animate={{ x: 0 }}
@@ -57,18 +76,18 @@ export const SideMenu: React.FC<SideMenuProps> = ({
 
             <div className="px-8 py-6 bg-slate-50/50">
               <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+                <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-lg">
                   <User size={24} />
                 </div>
                 <div>
                   <h4 className="font-extrabold text-slate-800 text-base truncate w-40 leading-none">{userName}</h4>
-                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">{role}</p>
+                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">{userId || role}</p>
                 </div>
               </div>
             </div>
 
             <nav className="flex-grow px-4 py-8 space-y-2">
-              <div className="px-4 mb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Main Modules</div>
+              <div className="px-4 mb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Modules</div>
               {filteredItems.map(item => {
                 const Icon = item.icon;
                 const isActive = activeView === item.id;
@@ -78,31 +97,27 @@ export const SideMenu: React.FC<SideMenuProps> = ({
                     onClick={() => { onNavigate(item.id); onClose(); }}
                     className={`w-full flex items-center space-x-3 px-5 py-4 rounded-2xl transition-all group ${
                       isActive 
-                      ? 'bg-slate-900 text-white shadow-2xl shadow-slate-900/20 translate-x-1' 
+                      ? 'bg-slate-900 text-white shadow-2xl translate-x-1' 
                       : item.primary 
-                        ? 'text-indigo-600 bg-indigo-50/50 hover:bg-indigo-100/50 mb-4 font-black' 
+                        ? 'text-indigo-600 bg-indigo-50/50 hover:bg-indigo-100/50 mb-4' 
                         : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                     }`}
                   >
                     <Icon size={isActive ? 22 : 20} className={isActive ? 'text-indigo-400' : ''} />
                     <span className={`font-bold text-sm ${isActive ? 'text-white' : ''}`}>{item.label}</span>
-                    {item.primary && !isActive && <div className="ml-auto w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />}
                   </button>
                 );
               })}
             </nav>
 
-            <div className="p-6 space-y-2 mt-auto border-t border-slate-50">
+            <div className="p-6 mt-auto border-t border-slate-50">
               <button 
                 onClick={onLogout}
                 className="w-full flex items-center space-x-3 px-5 py-4 rounded-2xl text-red-500 hover:bg-red-50 transition-colors group"
               >
                 <LogOut size={20} className="group-hover:translate-x-1 transition-transform" />
-                <span className="font-extrabold text-sm uppercase tracking-wide">Logout Session</span>
+                <span className="font-extrabold text-sm uppercase tracking-wide">Logout</span>
               </button>
-              <div className="pt-4 text-center">
-                <p className="text-[9px] text-slate-300 font-black uppercase tracking-[0.2em]">AARAA Enterprise v3.0</p>
-              </div>
             </div>
           </motion.div>
         </>

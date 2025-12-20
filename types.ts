@@ -120,3 +120,11 @@ export interface AuthState {
   user: string | null;
   userId: string;
 }
+
+export interface DailyTask {
+  id: number;
+  description: string;
+  status: 'pending' | 'completed';
+  created_at: string;
+  user_id: string;
+}
