@@ -28,7 +28,7 @@ const App: React.FC = () => {
   const [materialRequests, setMaterialRequests] = useState<MaterialRequest[]>([]);
   const [dprRecords, setDprRecords] = useState<DPRRecord[]>([]);
   const [projects] = useState<Project[]>(PROJECTS_DATA);
-  const [tasks] = useState<ProjectTask[]>(INITIAL_TASKS);
+  const [tasks, setTasks] = useState<ProjectTask[]>([]);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark' || 
       (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -83,6 +83,20 @@ const App: React.FC = () => {
     photos: item.photos || []
   }), []);
 
+  const mapTask = useCallback((item: any): ProjectTask => ({
+    id: item.id,
+    title: item.title,
+    description: item.description,
+    status: item.status,
+    assignedTo: item.assigned_to,
+    projectName: item.project_name,
+    dueDate: item.due_date,
+    priority: item.priority,
+    response: item.response,
+    respondedAt: item.responded_at,
+    assignedBy: item.assigned_by
+  }), []);
+
   useEffect(() => {
     if (!auth.isAuthenticated) return;
 
@@ -92,6 +106,9 @@ const App: React.FC = () => {
 
       const { data: dprs } = await supabase.from('dpr_records').select('*').order('timestamp', { ascending: false });
       if (dprs) setDprRecords(dprs.map(mapDPR));
+
+      const { data: projectTasks } = await supabase.from('project_tasks').select('*').order('created_at', { ascending: false });
+      if (projectTasks) setTasks(projectTasks.map(mapTask));
     };
     fetchData();
 
@@ -112,11 +129,22 @@ const App: React.FC = () => {
         setDprRecords(prev => [newDpr, ...prev.filter(d => d.id !== newDpr.id)]);
       }).subscribe();
 
+    const taskChannel = supabase.channel('tasks-flow')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'project_tasks' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setTasks(prev => [mapTask(payload.new), ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          const updated = mapTask(payload.new);
+          setTasks(prev => prev.map(t => t.id === updated.id ? updated : t));
+        }
+      }).subscribe();
+
     return () => { 
       supabase.removeChannel(requestsChannel);
       supabase.removeChannel(dprChannel);
+      supabase.removeChannel(taskChannel);
     };
-  }, [auth.isAuthenticated, mapRequest, mapDPR]);
+  }, [auth.isAuthenticated, mapRequest, mapDPR, mapTask]);
 
   const handleSaveDPR = async (dpr: DPRRecord) => {
     const { error } = await supabase.from('dpr_records').insert({
@@ -189,6 +217,39 @@ const App: React.FC = () => {
     }
   };
 
+  const handleAssignTask = async (task: ProjectTask) => {
+    const { error } = await supabase.from('project_tasks').insert({
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      assigned_to: task.assignedTo,
+      assigned_by: auth.user,
+      project_name: task.projectName,
+      priority: task.priority,
+      due_date: task.dueDate
+    });
+
+    if (error) {
+      console.error('Error assigning task:', error);
+    } else {
+      setTasks(prev => [task, ...prev]);
+      alert(`Task "${task.title}" assigned to ${task.assignedTo}`);
+    }
+  };
+
+  const handleUpdateTaskResponse = async (taskId: string, response: string) => {
+    const { error } = await supabase.from('project_tasks').update({
+      response: response,
+      responded_at: new Date().toISOString(),
+      status: 'in-progress'
+    }).eq('id', taskId);
+
+    if (error) {
+      console.error('Error responding to task:', error);
+    }
+  };
+
   const getHeaderTitle = () => {
     if (activeView === 'petty_cash') return 'Petty Cash Ledger';
     if (activeView === 'dpr_viewer') return 'Reports Archive';
@@ -216,25 +277,36 @@ const App: React.FC = () => {
     }
 
     switch(auth.role) {
-      case 'pm': return <PMDashboard projects={projects} tasks={tasks} notifications={[]} requests={materialRequests} onAssignTask={() => {}} onClearNotification={() => {}} onUpdateIndentStatus={handleUpdateStatus} />;
+      case 'pm': return (
+        <PMDashboard 
+          projects={projects.filter(p => p.projectManager === auth.user)} 
+          tasks={tasks} 
+          notifications={[]} 
+          requests={materialRequests} 
+          onAssignTask={handleAssignTask} 
+          onClearNotification={() => {}} 
+          onUpdateIndentStatus={handleUpdateStatus} 
+        />
+      );
       case 'costing': return <CostingDashboard materialRequests={materialRequests} onUpdateIndentStatus={handleUpdateStatus} />;
       case 'procurement': return <ProcurementDashboard materialRequests={materialRequests} onUpdateIndentStatus={handleUpdateStatus} />;
       case 'ops': return <OpsDashboard materialRequests={materialRequests} onUpdateIndentStatus={handleUpdateStatus} />;
-      case 'md': return <MDDashboard materialRequests={materialRequests} onUpdateIndentStatus={handleUpdateStatus} />;
+      case 'md': return <MDDashboard materialRequests={materialRequests} tasks={tasks} onUpdateIndentStatus={handleUpdateStatus} />;
       case 'finance': return <FinanceDashboard materialRequests={materialRequests} onUpdateStatus={handleUpdateStatus} />;
       case 'se': return (
         <SEDashboard 
           userName={auth.user || 'Site Engineer'}
           userId={auth.userId}
           projects={projects.filter(p => p.siteEngineer === auth.user)} 
-          tasks={tasks} 
+          tasks={tasks.filter(t => t.assignedTo === auth.user)} 
           requests={materialRequests} 
           dprRecords={dprRecords}
           onUpdateTask={() => {}} 
           onUpdateProjectProgress={() => {}} 
           onSaveDPR={handleSaveDPR} 
           onUpdateIndentStatus={handleUpdateStatus} 
-          onSaveMaterialRequest={handleSaveMaterialRequest} 
+          onSaveMaterialRequest={handleSaveMaterialRequest}
+          onRespondToTask={handleUpdateTaskResponse}
         />
       );
       case 'maha': return (

@@ -1,5 +1,5 @@
 
-export type UserRole = 'maha' | 'dpr' | 'finance' | 'procurement' | 'pm' | 'se' | 'costing' | 'waaree' | 'ops' | 'md' | null;
+export type UserRole = 'maha' | 'dpr' | 'finance' | 'procurement' | 'pm' | 'se' | 'costing' | 'waaree' | 'ops' | 'md' | 'generic' | null;
 
 export interface LabourEntry {
   category: string;
@@ -43,18 +43,18 @@ export interface RequestItem {
 }
 
 export type IndentStatus = 
-  | 'Raised_By_SE'            // Step 1: Vivek raises
-  | 'PM_Review'              // Step 2: Mathiazhagan reviews/edits
-  | 'QS_Analysis'            // Step 3: Babu Sir market price check
-  | 'Procurement_Quoting'    // Step 4: AI1031 gets 3 quotes
-  | 'Ops_Approval'           // Step 5: Shanmugam selects quote
-  | 'MD_Final_Approval'      // Step 6: Nandakumar sign-off
-  | 'Finance_Payment_Pending'// Step 7: Sudha makes payment
-  | 'Procurement_Dispatch'   // Step 8: On the Way
-  | 'GRN_Pending'            // Step 9: Site receives, uploads bill+GRN
-  | 'Completed'              // Step 10: Final verification
-  | 'Rejected_By_PM'         // Terminal
-  | 'Returned_To_SE';        // Back to Step 1
+  | 'Raised_By_SE'
+  | 'PM_Review'
+  | 'QS_Analysis'
+  | 'Procurement_Quoting'
+  | 'Ops_Approval'
+  | 'MD_Final_Approval'
+  | 'Finance_Payment_Pending'
+  | 'Procurement_Dispatch'
+  | 'GRN_Pending'
+  | 'Completed'
+  | 'Rejected_By_PM'
+  | 'Returned_To_SE';
 
 export interface MaterialRequest {
   id: string;
@@ -68,50 +68,35 @@ export interface MaterialRequest {
   notes?: string;
   deadline: string;
   indentSheetPhoto?: string;
-  
-  // Workflow fields
   procurementComments?: string;
   costingComments?: string;
-  marketAnalysis?: string;      // Babu Sir
-  pmComments?: string;          // Mathiazhagan
-  opsComments?: string;          // Shanmugam
-  mdComments?: string;           // Nandakumar
-  paymentRef?: string;           // Sudha
+  marketAnalysis?: string;
+  pmComments?: string;
+  opsComments?: string;
+  mdComments?: string;
+  paymentRef?: string;
   poNumber?: string;
   grnDetails?: string;
-  grnPhotos?: string[];          // Signed GRN photo
-  vendorBillPhoto?: string;      // Original vendor bill
-  quotes?: string[];             // 3 Quotation photos
+  grnPhotos?: string[];
+  vendorBillPhoto?: string;
+  quotes?: string[];
 }
 
-export interface Project {
-  id: string;
-  name: string;
-  location: string;
-  siteEngineer: string;
-  projectManager?: string;
-  progress: number;
-  status: 'On Track' | 'Delayed' | 'Completed';
-}
-
-export interface ProjectTask {
-  id: string;
-  projectId: string;
-  description: string;
-  assignedDate: string;
-  dueDate: string;
-  status: 'Pending' | 'In Progress' | 'Completed';
-  updates?: string;
-}
-
-export interface Notification {
-  id: string;
-  message: string;
+export interface PettyCashEntry {
+  id: number;
   timestamp: number;
-  type: 'info' | 'success' | 'warning';
-  projectName?: string;
-  targetRole: UserRole | 'all';
-  read: boolean;
+  date: string;
+  user_id: string;
+  user_name: string;
+  amount: number;
+  paid_to: string;
+  remarks: string;
+  screenshot: string;
+  status: 'Pending_PM_Approval' | 'Pending_Finance_Disbursement' | 'Completed' | 'Rejected';
+  project_name?: string;
+  pm_comments?: string;
+  finance_comments?: string;
+  payment_ref?: string;
 }
 
 export interface AuthState {
@@ -127,4 +112,38 @@ export interface DailyTask {
   status: 'pending' | 'completed';
   created_at: string;
   user_id: string;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  location: string;
+  siteEngineer: string;
+  projectManager: string;
+  progress: number;
+  status: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface ProjectTask {
+  id: string;
+  title: string;
+  description: string;
+  status: 'pending' | 'in-progress' | 'completed';
+  assignedTo?: string;
+  projectName?: string;
+  dueDate?: string;
+  priority?: 'Low' | 'Medium' | 'High';
+  response?: string;
+  respondedAt?: string;
+  assignedBy?: string;
+}
+
+export interface Notification {
+  id: string;
+  timestamp: number;
+  message: string;
+  type: 'success' | 'warning' | 'info';
+  projectName?: string;
 }

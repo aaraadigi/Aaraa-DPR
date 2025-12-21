@@ -114,38 +114,51 @@ export const MATERIAL_INDENT_SUGGESTIONS = [
 
 export const PROJECTS_DATA: Project[] = [
   { 
-    id: 'p1', 
+    id: 'PRJ-WAAREE', 
     name: 'WAAREE', 
-    location: 'Chennai Site A', 
-    siteEngineer: 'Bakayaraj', // ai1033
-    projectManager: 'Mathiazhagan',
+    location: 'Solar Site', 
+    siteEngineer: 'Alphonse Jesudoss', 
+    projectManager: 'Mathiyazhagan',
     progress: 15, 
     status: 'On Track' 
   },
   { 
-    id: 'p2', 
-    name: 'WABAG', 
-    location: 'Chennai Site B', 
-    siteEngineer: 'Sakthi Vignesh', // ai1028
-    projectManager: 'Mathiazhagan',
-    progress: 45, 
-    status: 'On Track' 
+    id: 'PRJ-BLUESTAR', 
+    name: 'Bluestar', 
+    location: 'HVAC Installation', 
+    siteEngineer: 'Bhakiyaraj', 
+    projectManager: 'Muthu Kumar',
+    progress: 70, 
+    status: 'On Track',
+    startDate: '2025-12-09',
+    endDate: '2026-01-31'
   },
   { 
-    id: 'p3', 
+    id: 'PRJ-WABAG', 
+    name: 'VA TECH WABAG', 
+    location: 'Water Treatment Plant', 
+    siteEngineer: 'Elavarasan', 
+    projectManager: 'Muthu Kumar',
+    progress: 60, 
+    status: 'On Track',
+    startDate: '2025-10-24',
+    endDate: '2026-03-10'
+  },
+  { 
+    id: 'PRJ-SRMAP', 
     name: 'SRM AP', 
-    location: 'Andhra Pradesh', 
-    siteEngineer: 'Elevarasan', // ai1006
-    projectManager: 'Mathiazhagan',
+    location: 'Andhra Pradesh Campus', 
+    siteEngineer: 'Karthikeyan R', 
+    projectManager: 'Mathiyazhagan',
     progress: 30, 
     status: 'On Track' 
   },
   { 
-    id: 'p4', 
-    name: 'VIBGYOR', 
-    location: 'OMR, Chennai', 
+    id: 'PRJ-VIBGYOUR', 
+    name: 'Vibgyour', 
+    location: 'Education Hub', 
     siteEngineer: 'Vivek', 
-    projectManager: 'Mathiazhagan',
+    projectManager: 'Mathiyazhagan',
     progress: 60, 
     status: 'On Track' 
   }

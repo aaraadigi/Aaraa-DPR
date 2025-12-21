@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Plus, Users, Package, Activity, ArrowRight, CheckCircle2, 
-  Clock, FileText, Building2, ShieldAlert, Trash2, Database, AlertTriangle, RefreshCw 
+  Clock, FileText, Building2, ShieldAlert, Trash2, Database, AlertTriangle, RefreshCw, Cloud
 } from 'lucide-react';
 import { GlassCard } from './ui/GlassCard';
 import { DPREntryForm } from './DPREntryForm';
@@ -52,27 +52,34 @@ export const MahaDashboard: React.FC<MahaDashboardProps> = ({
   ].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
 
   const handleClearTable = async (table: string) => {
-    if (!window.confirm(`DANGER: This will permanently delete ALL data from ${table}. This cannot be undone. Are you sure?`)) {
+    const confirmMsg = table === 'all' 
+      ? "SYSTEM WIPE: This will permanently delete ALL data from ALL tables. Are you absolutely sure?"
+      : `DANGER: This will permanently delete ALL data from ${table}. Are you sure?`;
+
+    if (!window.confirm(confirmMsg)) {
       return;
     }
 
     setIsDeleting(true);
     try {
-      // Supabase delete requires a filter to be present. 
-      // Using .neq('id', 'placeholder') or .gt('id', 0) to target all rows.
-      const idColumn = (table === 'petty_cash' || table === 'daily_tasks') ? 'id' : 'id';
-      const filterValue = (table === 'petty_cash' || table === 'daily_tasks') ? -1 : '_clear_all_';
+      const tablesToClear = table === 'all' 
+        ? ['uploaded_files', 'upload_sessions', 'dpr_records', 'material_requests', 'petty_cash', 'daily_tasks']
+        : [table];
 
-      const { error } = await supabase
-        .from(table)
-        .delete()
-        .neq(idColumn, filterValue);
+      for (const t of tablesToClear) {
+        // Use a generic truthy filter to delete all rows
+        const { error } = await supabase
+          .from(t)
+          .delete()
+          .neq('id', '___non_existent_placeholder___');
 
-      if (error) throw error;
-      alert(`Success: ${table} has been cleared.`);
-      window.location.reload(); // Refresh to clear local state
+        if (error) throw error;
+      }
+
+      alert(`Success: Database reset completed.`);
+      window.location.reload(); 
     } catch (err: any) {
-      alert(`Error clearing ${table}: ${err.message}`);
+      alert(`Error resetting database: ${err.message}`);
     } finally {
       setIsDeleting(false);
     }
@@ -183,10 +190,10 @@ export const MahaDashboard: React.FC<MahaDashboardProps> = ({
               <div className="p-3 bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-2xl">
                 <RefreshCw size={24} />
               </div>
-              <h3 className="text-xl font-bold text-slate-800 dark:text-white">Ledger Resets</h3>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white">General Resets</h3>
             </div>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
-              Clear financial records and daily task journal entries. Useful for starting a new financial period or testing cycle.
+              Clear financial records, cloud sync logs, and personal task journal entries.
             </p>
             <div className="space-y-3">
               <button 
@@ -197,14 +204,24 @@ export const MahaDashboard: React.FC<MahaDashboardProps> = ({
                 <Trash2 size={18} /> Clear Petty Cash
               </button>
               <button 
-                onClick={() => handleClearTable('daily_tasks')}
+                onClick={() => handleClearTable('upload_sessions')}
                 disabled={isDeleting}
-                className="w-full bg-white dark:bg-white/5 border border-amber-200 dark:border-amber-500/20 text-amber-600 dark:text-amber-400 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-all disabled:opacity-50"
+                className="w-full bg-white dark:bg-white/5 border border-blue-200 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all disabled:opacity-50"
               >
-                <Trash2 size={18} /> Reset Task Boards
+                <Cloud size={18} /> Clear Sync Logs
               </button>
             </div>
           </GlassCard>
+        </div>
+
+        <div className="mt-8">
+          <button 
+            onClick={() => handleClearTable('all')}
+            disabled={isDeleting}
+            className="w-full bg-red-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-red-500/20 hover:bg-red-700 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+          >
+            <Trash2 size={20} /> Full System Wipe
+          </button>
         </div>
 
         <div className="mt-12 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-3xl p-8 flex items-start gap-4">
@@ -212,7 +229,7 @@ export const MahaDashboard: React.FC<MahaDashboardProps> = ({
           <div>
             <h4 className="text-red-800 dark:text-red-400 font-bold mb-1">Warning: Irreversible Actions</h4>
             <p className="text-red-700 dark:text-red-300/70 text-sm leading-relaxed">
-              Performing any cleanup action here will permanently erase data from the Supabase production environment. There is no backup or "undo" functionality for these maintenance operations. Ensure you have exported necessary CSV reports before proceeding.
+              Performing any cleanup action here will permanently erase data from the Supabase production environment. There is no backup or "undo" functionality for these maintenance operations.
             </p>
           </div>
         </div>
