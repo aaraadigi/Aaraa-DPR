@@ -1,23 +1,26 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-// Added XCircle to the import list from lucide-react
-import { Building2, MapPin, Search, ThumbsUp, ThumbsDown, Edit2, Save, PackageCheck, History, Clock, CheckCircle2, Package, Image as ImageIcon, Calendar, Plus, User, AlertCircle, XCircle } from 'lucide-react';
+import { Building2, MapPin, Search, ThumbsUp, ThumbsDown, Edit2, Save, PackageCheck, History, Clock, CheckCircle2, Package, Image as ImageIcon, Calendar, Plus, User, AlertCircle, XCircle, Wallet, ArrowRight } from 'lucide-react';
 import { GlassCard } from './ui/GlassCard';
 import { IndentStatusTracker } from './IndentStatusTracker';
-import { Project, ProjectTask, Notification, MaterialRequest, RequestItem } from '../types';
+import { Project, ProjectTask, Notification, MaterialRequest, RequestItem, PettyCashEntry } from '../types';
 
 interface PMDashboardProps {
   projects: Project[];
   tasks: ProjectTask[];
   notifications: Notification[];
   requests: MaterialRequest[];
+  pettyCashEntries?: PettyCashEntry[];
   onAssignTask: (task: ProjectTask) => void;
   onClearNotification: (id: string) => void;
   onUpdateIndentStatus?: (id: string, status: string, payload?: any) => void;
+  onNavigateView?: (view: any) => void;
 }
 
-export const PMDashboard: React.FC<PMDashboardProps> = ({ projects, tasks, requests = [], onUpdateIndentStatus, onAssignTask }) => {
+export const PMDashboard: React.FC<PMDashboardProps> = ({ 
+  projects, tasks, requests = [], pettyCashEntries = [], onUpdateIndentStatus, onAssignTask, onNavigateView 
+}) => {
   const [activeTab, setActiveTab] = useState<'projects' | 'approvals' | 'history'>('approvals');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -34,6 +37,10 @@ export const PMDashboard: React.FC<PMDashboardProps> = ({ projects, tasks, reque
   const pendingApprovals = useMemo(() => 
     requests.filter(req => req.status === 'PM_Review' || req.status === 'Raised_By_SE')
   , [requests]);
+
+  const pendingPettyCash = useMemo(() => 
+    pettyCashEntries.filter(e => e.status === 'Pending_PM_Approval')
+  , [pettyCashEntries]);
 
   const requestHistory = useMemo(() => 
     requests.filter(req => req.status !== 'PM_Review' && req.status !== 'Raised_By_SE')
@@ -70,6 +77,33 @@ export const PMDashboard: React.FC<PMDashboardProps> = ({ projects, tasks, reque
 
   return (
     <div className="max-w-6xl mx-auto px-4 pb-20 relative">
+      {/* Petty Cash Alert for Mathiyazhagan */}
+      {pendingPettyCash.length > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div 
+            onClick={() => onNavigateView?.('petty_cash')}
+            className="group cursor-pointer bg-amber-500 text-white p-6 rounded-[2rem] shadow-xl shadow-amber-500/20 flex flex-col md:flex-row items-center justify-between gap-4 transition-all hover:scale-[1.01]"
+          >
+            <div className="flex items-center gap-5">
+              <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center">
+                <Wallet size={28} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black uppercase tracking-tight">Petty Cash Approvals Pending</h3>
+                <p className="text-amber-50 font-medium">You have {pendingPettyCash.length} expense requests waiting for your authorization.</p>
+              </div>
+            </div>
+            <button className="bg-white text-amber-600 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 group-hover:gap-4 transition-all">
+              Review Now <ArrowRight size={16} />
+            </button>
+          </div>
+        </motion.div>
+      )}
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div className="flex space-x-2 bg-slate-200/50 dark:bg-white/5 p-1 rounded-xl w-fit">
           <button onClick={() => setActiveTab('approvals')} className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'approvals' ? 'bg-white dark:bg-[#2c2c2e] text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
@@ -180,13 +214,13 @@ export const PMDashboard: React.FC<PMDashboardProps> = ({ projects, tasks, reque
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl border dark:border-white/5">
                     <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1">Project Head</p>
-                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <p className="text-xs font-bold text-slate-800 dark:text-200 flex items-center gap-1.5">
                       <User size={12} className="text-indigo-500" /> {p.projectManager}
                     </p>
                   </div>
                   <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl border dark:border-white/5">
                     <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1">Site Engineer</p>
-                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <p className="text-xs font-bold text-slate-800 dark:text-200 flex items-center gap-1.5">
                       <User size={12} className="text-green-500" /> {p.siteEngineer}
                     </p>
                   </div>

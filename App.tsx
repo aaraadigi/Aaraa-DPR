@@ -16,7 +16,7 @@ import { MDDashboard } from './components/MDDashboard';
 import { PettyCash } from './components/PettyCash';
 import { DailyTaskBoard } from './components/DailyTaskBoard';
 import { Footer } from './components/Footer';
-import { AuthState, DPRRecord, MaterialRequest, UserRole, Project, ProjectTask, Notification } from './types';
+import { AuthState, DPRRecord, MaterialRequest, UserRole, Project, ProjectTask, Notification, PettyCashEntry } from './types';
 import { PROJECTS_DATA, INITIAL_TASKS } from './constants';
 import { supabase } from './lib/supabaseClient';
 import { Menu, Sun, Moon } from 'lucide-react';
@@ -27,6 +27,7 @@ const App: React.FC = () => {
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [materialRequests, setMaterialRequests] = useState<MaterialRequest[]>([]);
   const [dprRecords, setDprRecords] = useState<DPRRecord[]>([]);
+  const [pettyCashEntries, setPettyCashEntries] = useState<PettyCashEntry[]>([]);
   const [projects] = useState<Project[]>(PROJECTS_DATA);
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -101,17 +102,25 @@ const App: React.FC = () => {
     if (!auth.isAuthenticated) return;
 
     const fetchData = async () => {
-      const { data: requests } = await supabase.from('material_requests').select('*').order('timestamp', { ascending: false });
-      if (requests) setMaterialRequests(requests.map(mapRequest));
+      try {
+        const { data: requests } = await supabase.from('material_requests').select('*').order('timestamp', { ascending: false });
+        if (requests) setMaterialRequests(requests.map(mapRequest));
 
-      const { data: dprs } = await supabase.from('dpr_records').select('*').order('timestamp', { ascending: false });
-      if (dprs) setDprRecords(dprs.map(mapDPR));
+        const { data: dprs } = await supabase.from('dpr_records').select('*').order('timestamp', { ascending: false });
+        if (dprs) setDprRecords(dprs.map(mapDPR));
 
-      const { data: projectTasks } = await supabase.from('project_tasks').select('*').order('created_at', { ascending: false });
-      if (projectTasks) setTasks(projectTasks.map(mapTask));
+        const { data: projectTasks } = await supabase.from('project_tasks').select('*').order('created_at', { ascending: false });
+        if (projectTasks) setTasks(projectTasks.map(mapTask));
+
+        const { data: pettyCash } = await supabase.from('petty_cash').select('*').order('id', { ascending: false });
+        if (pettyCash) setPettyCashEntries(pettyCash);
+      } catch (err) {
+        console.error("Fetch failed (Check if tables exist):", err);
+      }
     };
     fetchData();
 
+    // Setup Realtime Channels
     const requestsChannel = supabase.channel('requests-flow')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'material_requests' }, (payload) => {
         if (payload.eventType === 'INSERT') {
@@ -139,10 +148,23 @@ const App: React.FC = () => {
         }
       }).subscribe();
 
+    const pettyCashChannel = supabase.channel('petty-cash-flow')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'petty_cash' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setPettyCashEntries(prev => [payload.new as PettyCashEntry, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          const updated = payload.new as PettyCashEntry;
+          setPettyCashEntries(prev => prev.map(e => e.id === updated.id ? updated : e));
+        } else if (payload.eventType === 'DELETE') {
+          setPettyCashEntries(prev => prev.filter(e => e.id !== payload.old.id));
+        }
+      }).subscribe();
+
     return () => { 
       supabase.removeChannel(requestsChannel);
       supabase.removeChannel(dprChannel);
       supabase.removeChannel(taskChannel);
+      supabase.removeChannel(pettyCashChannel);
     };
   }, [auth.isAuthenticated, mapRequest, mapDPR, mapTask]);
 
@@ -161,13 +183,7 @@ const App: React.FC = () => {
       risks_and_delays: dpr.risksAndDelays,
       photos: dpr.photos
     });
-
-    if (error) {
-      console.error('Database Error:', error);
-      throw error;
-    } else {
-      setDprRecords(prev => [dpr, ...prev]);
-    }
+    if (error) throw error;
   };
 
   const handleSaveMaterialRequest = async (req: MaterialRequest) => {
@@ -184,14 +200,7 @@ const App: React.FC = () => {
       deadline: req.deadline,
       indent_sheet_photo: req.indentSheetPhoto
     });
-    
-    if (error) {
-      console.error('Error saving request:', error);
-      alert('Failed to submit request.');
-    } else {
-      setMaterialRequests(prev => [req, ...prev]);
-      alert('Material request submitted to PM for review.');
-    }
+    if (error) throw error;
   };
 
   const handleUpdateStatus = async (id: string, newStatus: string, payload: any = {}) => {
@@ -210,15 +219,11 @@ const App: React.FC = () => {
       vendor_bill_photo: payload.vendorBillPhoto
     };
     Object.keys(dbPayload).forEach(key => dbPayload[key] === undefined && delete dbPayload[key]);
-    
-    const { error } = await supabase.from('material_requests').update(dbPayload).eq('id', id);
-    if (!error) {
-      setMaterialRequests(prev => prev.map(r => r.id === id ? { ...r, status: newStatus as any, ...payload } : r));
-    }
+    await supabase.from('material_requests').update(dbPayload).eq('id', id);
   };
 
   const handleAssignTask = async (task: ProjectTask) => {
-    const { error } = await supabase.from('project_tasks').insert({
+    await supabase.from('project_tasks').insert({
       id: task.id,
       title: task.title,
       description: task.description,
@@ -229,25 +234,14 @@ const App: React.FC = () => {
       priority: task.priority,
       due_date: task.dueDate
     });
-
-    if (error) {
-      console.error('Error assigning task:', error);
-    } else {
-      setTasks(prev => [task, ...prev]);
-      alert(`Task "${task.title}" assigned to ${task.assignedTo}`);
-    }
   };
 
   const handleUpdateTaskResponse = async (taskId: string, response: string) => {
-    const { error } = await supabase.from('project_tasks').update({
+    await supabase.from('project_tasks').update({
       response: response,
       responded_at: new Date().toISOString(),
       status: 'in-progress'
     }).eq('id', taskId);
-
-    if (error) {
-      console.error('Error responding to task:', error);
-    }
   };
 
   const getHeaderTitle = () => {
@@ -261,6 +255,7 @@ const App: React.FC = () => {
       case 'costing': return 'QS & Billing';
       case 'finance': return 'Finance Portal';
       case 'se': return 'Site Dashboard';
+      case 'maha': return 'Admin Dashboard';
       default: return 'Enterprise Resource Portal';
     }
   };
@@ -283,9 +278,11 @@ const App: React.FC = () => {
           tasks={tasks} 
           notifications={[]} 
           requests={materialRequests} 
+          pettyCashEntries={pettyCashEntries}
           onAssignTask={handleAssignTask} 
           onClearNotification={() => {}} 
           onUpdateIndentStatus={handleUpdateStatus} 
+          onNavigateView={setActiveView}
         />
       );
       case 'costing': return <CostingDashboard materialRequests={materialRequests} onUpdateIndentStatus={handleUpdateStatus} />;
@@ -353,11 +350,9 @@ const App: React.FC = () => {
               <h2 className="text-xl font-bold text-slate-800 dark:text-white hidden lg:block">{getHeaderTitle()}</h2>
               
               <div className="flex items-center space-x-3 md:space-x-5">
-                 {/* Theme Toggle */}
                  <button 
                   onClick={() => setIsDarkMode(!isDarkMode)}
                   className="p-2.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/20 transition-all"
-                  aria-label="Toggle Theme"
                  >
                    {isDarkMode ? <Sun size={20} className="text-amber-400" /> : <Moon size={20} className="text-slate-600" />}
                  </button>
