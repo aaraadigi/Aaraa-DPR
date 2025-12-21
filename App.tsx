@@ -80,7 +80,7 @@ const App: React.FC = () => {
     activities: item.activities || [],
     machinery: item.machinery,
     safetyObservations: item.safety_observations,
-    risksAndDelays: item.risks_and_delays,
+    risks_and_delays: item.risks_and_delays,
     photos: item.photos || []
   }), []);
 
@@ -198,6 +198,7 @@ const App: React.FC = () => {
       status: req.status,
       notes: req.notes,
       deadline: req.deadline,
+      // Fix: using indentSheetPhoto instead of indent_sheet_photo to match MaterialRequest interface
       indent_sheet_photo: req.indentSheetPhoto
     });
     if (error) throw error;
@@ -288,7 +289,15 @@ const App: React.FC = () => {
       case 'costing': return <CostingDashboard materialRequests={materialRequests} onUpdateIndentStatus={handleUpdateStatus} />;
       case 'procurement': return <ProcurementDashboard materialRequests={materialRequests} onUpdateIndentStatus={handleUpdateStatus} />;
       case 'ops': return <OpsDashboard materialRequests={materialRequests} onUpdateIndentStatus={handleUpdateStatus} />;
-      case 'md': return <MDDashboard materialRequests={materialRequests} tasks={tasks} onUpdateIndentStatus={handleUpdateStatus} />;
+      case 'md': return (
+        <MDDashboard 
+          materialRequests={materialRequests} 
+          tasks={tasks} 
+          projects={projects}
+          dprRecords={dprRecords}
+          onUpdateIndentStatus={handleUpdateStatus} 
+        />
+      );
       case 'finance': return <FinanceDashboard materialRequests={materialRequests} onUpdateStatus={handleUpdateStatus} />;
       case 'se': return (
         <SEDashboard 

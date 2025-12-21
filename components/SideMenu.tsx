@@ -32,14 +32,14 @@ export const SideMenu: React.FC<SideMenuProps> = ({
       id: 'petty_cash', 
       label: 'Petty Cash', 
       icon: Wallet, 
-      roles: ['all'], 
+      roles: ['all', 'md'], 
       primary: true 
     },
     { 
       id: 'dashboard', 
       label: 'Management Dash', 
       icon: LayoutDashboard, 
-      roles: ['all'] 
+      roles: ['all', 'md'] 
     },
     { 
       id: 'dpr_viewer', 
